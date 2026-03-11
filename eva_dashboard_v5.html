@@ -821,7 +821,7 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
     <div class="sbar-item"><span class="sbar-label">TRADES</span><span class="sbar-val neu" id="sb-trades">0</span></div>
     <div class="sbar-item"><span class="sbar-label">MODELO</span><span class="sbar-val" style="color:var(--purple)" id="sb-modelo">—</span></div>
   </div>
-  <div id="sb-robobadge" class="robo-badge off">● ROBÔ OFFLINE</div>
+  <div id="sb-robobadge" class="robo-badge off" onclick="toggleRoboSupabase()" title="Clique para ligar/desligar o robô" style="cursor:pointer">● ROBÔ OFFLINE</div>
 </div>
 
 <!-- NAV -->
@@ -2709,6 +2709,20 @@ async function fazerLogin() {
 
   // Sucesso — esconde login
   entrarNoDashboard(data.user)
+}
+
+async function toggleRoboSupabase() {
+  const badge = document.getElementById('sb-robobadge')
+  const estaOn = badge.classList.contains('on')
+  const novoEstado = !estaOn
+  const r = await sbWrite('configuracoes', {chave:'robo_ativo', valor: novoEstado.toString()})
+  if (r) {
+    badge.className = `robo-badge ${novoEstado?'on':'off'}`
+    badge.textContent = novoEstado ? '● ROBÔ ONLINE' : '● ROBÔ OFFLINE'
+    toast(novoEstado ? '🟢 Robô LIGADO — aguarde 30s' : '🔴 Robô DESLIGADO', 'a')
+  } else {
+    toast('❌ Erro ao atualizar estado do robô', 'a')
+  }
 }
 
 async function esqueceuSenha() {
