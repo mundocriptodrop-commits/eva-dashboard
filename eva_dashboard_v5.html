@@ -1453,6 +1453,22 @@ async function sbWrite(table, data, method='POST', query='') {
 }
 
 // ══════════════════════════════════════════
+// UTILITÁRIO — acesso seguro ao DOM
+// ══════════════════════════════════════════
+function setText(id, val) {
+  const el = document.getElementById(id)
+  if (el) el.textContent = val
+}
+function setClass(id, cls) {
+  const el = document.getElementById(id)
+  if (el) el.className = cls
+}
+function setVal(id, val) {
+  const el = document.getElementById(id)
+  if (el) el.value = val
+}
+
+// ══════════════════════════════════════════
 // ESTADO
 // ══════════════════════════════════════════
 const S = {
@@ -1464,7 +1480,7 @@ const S = {
 // ══════════════════════════════════════════
 // CLOCK
 // ══════════════════════════════════════════
-setInterval(()=>{ document.getElementById('clk').textContent = new Date().toLocaleTimeString('pt-BR',{hour12:false}) }, 1000)
+setInterval(()=>{ setText('clk', new Date().toLocaleTimeString('pt-BR',{hour12:false}) }, 1000))
 
 // ══════════════════════════════════════════
 // NAVEGAÇÃO
@@ -1515,16 +1531,16 @@ function renderTick(t) {
   el.classList.add('tick-flash')
   setTimeout(()=>el.classList.remove('tick-flash'),350)
 
-  document.getElementById(`${pre}-bid`).textContent = parseFloat(t.bid).toFixed(isW?0:2)
-  document.getElementById(`${pre}-ask`).textContent = parseFloat(t.ask).toFixed(isW?0:2)
-  document.getElementById(`${pre}-spr`).textContent = (t.ask-t.bid).toFixed(isW?0:2)
+  setText(`${pre}-bid`, parseFloat(t.bid).toFixed(isW?0:2))
+  setText(`${pre}-ask`, parseFloat(t.ask).toFixed(isW?0:2))
+  setText(`${pre}-spr`, (t.ask-t.bid).toFixed(isW?0:2))
 
   const vPct = ((ult-S.ticksRef[t.symbol])/S.ticksRef[t.symbol]*100)
   const vEl  = document.getElementById(`${pre}-var`)
   vEl.textContent = `${vPct>=0?'+':''}${vPct.toFixed(2)}%`
   vEl.className   = `pb-var ${vPct>=0?'up':'dn'}`
 
-  document.getElementById('tick-ts').textContent = new Date(t.ts).toLocaleTimeString('pt-BR',{hour12:false})
+  setText('tick-ts', new Date(t.ts).toLocaleTimeString('pt-BR',{hour12:false}))
 
   // Atualiza P&L se há posição
   const pos = Object.values(S.posicoes).find(p=>p.symbol===t.symbol&&p.status==='aberta')
@@ -1548,7 +1564,7 @@ function renderAnalise(a) {
   badge.className = `sinal-grande ${sinal}`
 
   // Confiança
-  document.getElementById(`${pre}-conf`).textContent = conf
+  setText(`${pre}-conf`, conf)
   const bar = document.getElementById(`${pre}-bar`)
   bar.style.width = `${conf}%`
   bar.className = `conf-fill ${conf>=75?'alta':conf>=60?'media':'baixa'}`
@@ -1573,9 +1589,9 @@ function renderAnalise(a) {
   mEl.className = `modo-tag ${modo==='monitoramento'?'monit':'busca'}`
 
   // Setup / qualidade / perfil
-  document.getElementById(`${pre}-setup`).textContent  = a.setup_final || (sinal==='AGUARDAR' ? 'NENHUM' : '—')
-  document.getElementById(`${pre}-qual`).textContent   = a.qualidade_final || '—'
-  document.getElementById(`${pre}-perfil`).textContent = `${(a.perfil_ia||'normal').toUpperCase()} — ${a.lotes_ia||1} LOTE`
+  setText(`${pre}-setup`, a.setup_final || (sinal==='AGUARDAR' ? 'NENHUM' : '—'))
+  setText(`${pre}-qual`, a.qualidade_final || '—')
+  setText(`${pre}-perfil`, `${(a.perfil_ia||'normal').toUpperCase()} — ${a.lotes_ia||1} LOTE`)
 
   // Entrada/SR: opacidade reduzida quando AGUARDAR
   const ewrap = document.getElementById(`${pre}-entrada-wrap`)
@@ -1599,9 +1615,9 @@ function renderAnalise(a) {
 
   // Entrada sugerida
   if (sinal !== 'AGUARDAR') {
-    document.getElementById(`${pre}-entrada`).textContent = a.entrada_sugerida ? parseFloat(a.entrada_sugerida).toFixed(0) : '—'
-    document.getElementById(`${pre}-sl`).textContent      = a.sl_sugerido      ? parseFloat(a.sl_sugerido).toFixed(0)      : '—'
-    document.getElementById(`${pre}-tp`).textContent      = a.tp_sugerido      ? parseFloat(a.tp_sugerido).toFixed(0)      : '—'
+    setText(`${pre}-entrada`, a.entrada_sugerida ? parseFloat(a.entrada_sugerida).toFixed(0) : '—')
+    setText(`${pre}-sl`, a.sl_sugerido ? parseFloat(a.sl_sugerido).toFixed(0) : '—')
+    setText(`${pre}-tp`, a.tp_sugerido ? parseFloat(a.tp_sugerido).toFixed(0) : '—')
   }
 
   // Suportes / Resistências
@@ -1615,10 +1631,10 @@ function renderAnalise(a) {
   renderSR('sup', Array.isArray(a.suportes)?a.suportes:JSON.parse(a.suportes||'[]'))
 
   // Resumo IA
-  document.getElementById(`${pre}-resumo`).textContent = a.resumo_ia||a.scout_motivo||'Aguardando...'
+  setText(`${pre}-resumo`, a.resumo_ia||a.scout_motivo||'Aguardando...')
 
   // Status bar modelo
-  document.getElementById('sb-modelo').textContent = a.scout_modelo||a.decisor_modelo||'—'
+  setText('sb-modelo', a.scout_modelo||a.decisor_modelo||'—')
 
   // Timestamp com indicação de idade
   const tsAnal   = new Date(a.ts)
@@ -1650,7 +1666,7 @@ function renderAnalise(a) {
 function renderPosicao() {
   const pos = Object.values(S.posicoes).find(p=>p.status==='aberta')
   const el  = document.getElementById('pos-content')
-  document.getElementById('pos-setup').textContent = pos?.setup||''
+  setText('pos-setup', pos?.setup||'')
 
   if (!pos) { el.innerHTML='<div class="pos-vazia">SEM POSIÇÃO ABERTA</div>'; return }
 
@@ -1700,26 +1716,25 @@ function renderPerf() {
   wEl.textContent = `${wr.toFixed(0)}%`
   wEl.className   = `perf-num ${wr>=60?'pos':wr>=40?'neu':'neg'}`
 
-  document.getElementById('pf-tr').textContent = p.trades||0
-  document.getElementById('pf-mg').textContent = `+R$${mg.toFixed(2)}`
-  document.getElementById('pf-ms').textContent = p.melhor_setup||'—'
-  document.getElementById('pf-ps').textContent = p.pior_setup||'—'
-  document.getElementById('pf-mod').textContent = p.modelo_ia||'—'
-  if (p.saldo_final) document.getElementById('pf-sf').textContent =
-    `R$ ${parseFloat(p.saldo_final).toLocaleString('pt-BR',{minimumFractionDigits:2})}`
+  setText('pf-tr', p.trades||0)
+  setText('pf-mg', `+R$${mg.toFixed(2)}`)
+  setText('pf-ms', p.melhor_setup||'—')
+  setText('pf-ps', p.pior_setup||'—')
+  setText('pf-mod', p.modelo_ia||'—')
+  if (p.saldo_final) setText('pf-sf', `R$ ${parseFloat(p.saldo_final).toLocaleString('pt-BR',{minimumFractionDigits:2})}`)
 
   // Status bar
   const sbEl = document.getElementById('sb-hoje')
   sbEl.textContent = `${res>=0?'+':''}R$${Math.abs(res).toFixed(2)}`
   sbEl.className   = `sbar-val ${res>0?'pos':res<0?'neg':'neu'}`
-  document.getElementById('sb-wr').textContent    = `${wr.toFixed(0)}%`
-  document.getElementById('sb-trades').textContent = p.trades||0
-  document.getElementById('perf-data').textContent = new Date().toLocaleDateString('pt-BR')
+  setText('sb-wr', `${wr.toFixed(0)}%`)
+  setText('sb-trades', p.trades||0)
+  setText('perf-data', new Date().toLocaleDateString('pt-BR'))
 }
 
 function renderHistorico() {
   const el = document.getElementById('hist-lista')
-  document.getElementById('hist-cnt').textContent = `${S.trades.length} trades`
+  setText('hist-cnt', `${S.trades.length} trades`)
   if (!S.trades.length) {
     el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM TRADE HOJE</div>'
     return
@@ -1777,7 +1792,7 @@ function renderHoras() {
 function renderAlertas() {
   const el  = document.getElementById('alt-lista')
   const cnt = S.alertas.filter(a=>!a.lido).length
-  document.getElementById('alt-cnt').textContent = cnt?`${cnt} novos`:'0'
+  setText('alt-cnt', cnt?`${cnt} novos`:'0')
   if (!S.alertas.length) { el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM ALERTA</div>'; return }
   const icons={ordem_executada:'✅',stop_atingido:'🛑',gain_atingido:'🎯',erro_sistema:'⚠️',perda_max:'❌',config_atualizada:'⚙️'}
   el.innerHTML = S.alertas.slice(0,10).map(a=>{
@@ -1800,7 +1815,7 @@ function renderAlertas() {
 function renderDiario() {
   const el = document.getElementById('diar-body')
   if (!S.diario) { el.innerHTML='<div class="diario-vazio">O diário é gerado automaticamente às 17h após o fechamento do mercado.</div>'; return }
-  document.getElementById('diar-data').textContent = `Gerado em ${new Date(S.diario.ts_gerado).toLocaleString('pt-BR')}`
+  setText('diar-data', `Gerado em ${new Date(S.diario.ts_gerado).toLocaleString('pt-BR')}`)
   let html = (S.diario.texto_completo||'')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/^(\d+\.\s*[A-ZÇÃÁÉÍÓÚ ]+)$/gm,'<h2>$1</h2>')
@@ -1815,7 +1830,7 @@ function renderDiario() {
 function renderAprendizados() {
   const el  = document.getElementById('aprend-lista')
   const cnt = S.aprendizados.length
-  document.getElementById('aprend-cnt').textContent = cnt
+  setText('aprend-cnt', cnt)
   if (!cnt) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM APRENDIZADOS AINDA</div>'; return }
   const lbl={licao:'LIÇÃO',erro_recorrente:'ERRO RECORRENTE',recomendacao:'RECOMENDAÇÃO',setup_evitar:'SETUP EVITAR'}
   el.innerHTML = S.aprendizados.slice(0,20).map(a=>
@@ -1897,7 +1912,7 @@ function renderStatus() {
     const sys = document.getElementById(`sys-${c==='coletor'?'col':'rob'}`)
     if (!s) return
     const diff = (Date.now() - new Date(s.ultimo_heartbeat).getTime())/1000
-    const vivo = s.status==='online' && diff<60
+    const vivo = s.status==='online' && diff<120
     dot.className = `dot ${vivo?'on':'off'}`
     if (sys) { sys.textContent = vivo?'ONLINE':'OFFLINE'; sys.style.color = vivo?'var(--green)':'var(--red)' }
   })
@@ -1906,11 +1921,11 @@ function renderStatus() {
   const badge = document.getElementById('sb-robobadge')
   if (robo) {
     const diff = (Date.now()-new Date(robo.ultimo_heartbeat).getTime())/1000
-    const on = robo.status==='online'&&diff<60
+    const on = robo.status==='online'&&diff<120
     badge.textContent = on?'● ROBÔ ONLINE':'● ROBÔ OFFLINE'
     badge.className = `robo-badge ${on?'on':'off'}`
     if (robo.detalhes?.saldo) {
-      document.getElementById('sb-saldo').textContent = `R$ ${parseFloat(robo.detalhes.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`
+      setText('sb-saldo', `R$ ${parseFloat(robo.detalhes.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`)
     }
   }
 }
@@ -1939,7 +1954,7 @@ function toggleDia(el) { el.classList.toggle('on') }
 function toggleAgenda() {
   const t = document.getElementById('tog-agenda')
   t.classList.toggle('on')
-  document.getElementById('tog-agenda-lbl').textContent = t.classList.contains('on')?'ATIVADO':'DESATIVADO'
+  setText('tog-agenda-lbl', t.classList.contains('on')?'ATIVADO':'DESATIVADO')
 }
 
 // ══════════════════════════════════════════
@@ -2045,9 +2060,9 @@ async function carregarIaAutoStatus() {
 
   // Última calibração
   if (m.ia_auto_ultima_revisao) {
-    document.getElementById('ia-auto-ts').textContent =
+    setText('ia-auto-ts',
       new Date(m.ia_auto_ultima_revisao).toLocaleString('pt-BR')
-    document.getElementById('ia-auto-motivo').textContent = m.ia_auto_motivo || '—'
+    setText('ia-auto-motivo', m.ia_auto_motivo || '—')
 
     // Mostra valores que a IA definiu
     if (ativo) {
@@ -2128,7 +2143,7 @@ async function salvarAgenda() {
   await sbWrite('configuracoes', {chave:'horario_inicio', valor:liga})
   await sbWrite('configuracoes', {chave:'horario_fim',    valor:desliga})
   await sbWrite('configuracoes', {chave:'robo_ativo',     valor:ativado.toString()})
-  document.getElementById('lim-horario').textContent = `${liga} – ${desliga}`
+  setText('lim-horario', `${liga} – ${desliga}`)
   toast('Agendamento salvo!','a')
 }
 
@@ -2159,7 +2174,7 @@ async function carregarConfig() {
   if (m.perda_max_dia && document.getElementById('cfg-perda')) document.getElementById('cfg-perda').value = m.perda_max_dia
   if (m.lote_max && document.getElementById('cfg-lmax')) document.getElementById('cfg-lmax').value = m.lote_max
   if (m.horario_inicio && m.horario_fim)
-    document.getElementById('lim-horario').textContent = `${m.horario_inicio} – ${m.horario_fim}`
+    setText('lim-horario', `${m.horario_inicio} – ${m.horario_fim}`)
 }
 
 // ══════════════════════════════════════════
@@ -2273,7 +2288,7 @@ function iniciarRealtime() {
         atualizarUiIaAuto(valor==='true')
       }
       if (chave==='ia_auto_ultima_revisao') {
-        document.getElementById('ia-auto-ts').textContent = new Date(valor).toLocaleString('pt-BR')
+        setText('ia-auto-ts', new Date(valor).toLocaleString('pt-BR'))
         carregarIaAutoStatus()
         toast('🤖 IA calibrou os limites automaticamente!','a')
       }
@@ -2705,7 +2720,7 @@ function entrarNoDashboard(user) {
   const iniciais = nome.split(' ').slice(0,2).map(n=>n[0].toUpperCase()).join('')
   const av = document.getElementById('user-avatar')
   av.textContent = iniciais
-  document.getElementById('user-menu-email').textContent = user.email
+  setText('user-menu-email', user.email)
 
   // Anima saída do login
   const ls = document.getElementById('login-screen')
