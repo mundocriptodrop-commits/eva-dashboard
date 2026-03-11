@@ -2010,16 +2010,15 @@ async function salvarLimites() {
   document.getElementById('cfg-conf').value  = confMin
   document.getElementById('cfg-lmax').value  = loteMax
 
-  let ok = true
-  for (const [chave, valor] of campos) {
-    const r = await sbWrite('configuracoes', {chave, valor})
-    if (!r) { ok=false; break }
-  }
+  const results = await Promise.all(
+    campos.filter(([_,v])=>v).map(([chave,valor]) => sbWrite('configuracoes',{chave,valor}))
+  )
+  const ok = results.every(r=>r)
 
   if (ok) {
-    toast(iaAuto ? '🤖 IA vai calibrar os limites automaticamente!' : '🔒 Limites salvos!', 'a')
-    document.getElementById('lim-horario').textContent =
-      `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+    toast(iaAuto ? '🤖 IA vai calibrar os limites automaticamente!' : '🔒 Limites salvos! Robô aplica em 30s.', 'a')
+    const elH = document.getElementById('lim-horario')
+    if (elH) elH.textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
   } else {
     toast('❌ Erro ao salvar limites', 'a')
   }
@@ -2091,10 +2090,9 @@ async function salvarConfig() {
     )
     const ok = results.every(r => r)
 
-    // Atualiza display de limites
-    document.getElementById('lim-perda').textContent   = `R$ ${document.getElementById('cfg-perda').value}`
-    document.getElementById('lim-lotes').textContent   = document.getElementById('cfg-lmax').value
-    document.getElementById('lim-horario').textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+    // Atualiza display de limites (usa os IDs que existem no HTML)
+    const elHorario = document.getElementById('lim-horario')
+    if (elHorario) elHorario.textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
 
     st.style.color = ok ? 'var(--green)' : 'var(--red)'
     st.textContent  = ok ? '✅ Configuração salva! Robô aplica em até 30s.' : '❌ Erro ao salvar — verifique conexão'
@@ -2158,8 +2156,8 @@ async function carregarConfig() {
     })
   }
   // Atualiza limites
-  if (m.perda_max_dia) document.getElementById('lim-perda').textContent = `R$ ${m.perda_max_dia}`
-  if (m.lote_max)      document.getElementById('lim-lotes').textContent = m.lote_max
+  if (m.perda_max_dia && document.getElementById('cfg-perda')) document.getElementById('cfg-perda').value = m.perda_max_dia
+  if (m.lote_max && document.getElementById('cfg-lmax')) document.getElementById('cfg-lmax').value = m.lote_max
   if (m.horario_inicio && m.horario_fim)
     document.getElementById('lim-horario').textContent = `${m.horario_inicio} – ${m.horario_fim}`
 }
