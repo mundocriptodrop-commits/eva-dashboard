@@ -1933,8 +1933,21 @@ function renderStatus() {
     const on = robo.status==='online'&&diff<120
     badge.textContent = on?'● ROBÔ ONLINE':'● ROBÔ OFFLINE'
     badge.className = `robo-badge ${on?'on':'off'}`
-    if (robo.detalhes?.saldo) {
-      setText('sb-saldo', `R$ ${parseFloat(robo.detalhes.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`)
+    const d = robo.detalhes || {}
+    if (d.saldo) {
+      setText('sb-saldo', `R$ ${parseFloat(d.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`)
+    }
+    if (d.win_rate !== undefined) {
+      setText('sb-wr', `${parseFloat(d.win_rate).toFixed(0)}%`)
+    }
+    if (d.trades_hoje !== undefined) {
+      setText('sb-trades', d.trades_hoje)
+    }
+    // MODELO — usa label já montado no robô
+    if (d.modelo) {
+      const el = document.getElementById('sb-modelo')
+      el.textContent = d.modo_ia === 'dupla' ? 'DUPLA IA' : (d.scout_modelo || d.modelo || '—')
+      el.title = d.modelo  // tooltip com detalhe completo
     }
   }
 }
