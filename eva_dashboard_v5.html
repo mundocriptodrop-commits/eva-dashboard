@@ -343,35 +343,23 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
 /* ══ LADO DIREITO: galeria de imagens ══ */
 .lk-visual{
   flex:1;position:relative;overflow:hidden;
-  background:#000;
+  background:linear-gradient(160deg,#060810 0%,#080d14 50%,#050810 100%);
 }
 
-/* Slideshow de imagens */
-.lk-slides{position:absolute;inset:0;}
-.lk-slide{
-  position:absolute;inset:0;opacity:0;
-  transition:opacity 1.2s ease;
-  background-size:cover;background-position:center;
-}
-.lk-slide.ativo{opacity:1;}
-.lk-slide::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(
-    135deg,
-    rgba(0,0,0,.55) 0%,
-    rgba(0,0,0,.2) 50%,
-    rgba(0,0,0,.65) 100%
-  );
-}
+/* Sem slides de imagem — fundo puro escuro */
+.lk-slides{display:none;}
+.lk-slide{display:none;}
 
-/* Overlay de grid sobre as imagens */
+/* Grid animado */
 .lk-vis-grid{
   position:absolute;inset:0;z-index:2;pointer-events:none;
   background-image:
-    linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+    linear-gradient(rgba(0,212,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.04) 1px,transparent 1px);
   background-size:48px 48px;
+  animation:gridScroll 20s linear infinite;
 }
+@keyframes gridScroll{from{background-position:0 0}to{background-position:48px 48px}}
 
 /* Borda divisória luminosa */
 .lk-divider{
@@ -387,11 +375,18 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
   box-shadow:0 0 20px rgba(0,212,255,.4), 0 0 60px rgba(0,212,255,.1);
 }
 
-/* Conteúdo sobre as imagens */
+/* Conteúdo sobre o gráfico */
 .lk-vis-content{
   position:absolute;inset:0;z-index:5;
   display:flex;flex-direction:column;
-  justify-content:flex-end;padding:48px;
+  justify-content:flex-end;padding:44px 48px;
+  background:linear-gradient(
+    to top,
+    rgba(4,6,8,0.92) 0%,
+    rgba(4,6,8,0.6) 25%,
+    rgba(4,6,8,0.1) 50%,
+    transparent 100%
+  );
 }
 
 /* Tags flutuantes */
@@ -413,15 +408,16 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
   font-family:'Orbitron',monospace;
   font-size:38px;font-weight:900;line-height:1.1;
   color:#fff;letter-spacing:2px;margin-bottom:12px;
-  text-shadow:0 2px 20px rgba(0,0,0,.8);
+  text-shadow:0 0 40px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,.9);
   animation:visTitle .9s .1s both;
 }
 @keyframes visTitle{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-.lk-vis-title span{color:var(--cyan);}
+.lk-vis-title span{color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,.6);}
 
 .lk-vis-desc{
-  font-size:14px;font-weight:400;letter-spacing:.5px;
-  color:rgba(255,255,255,.6);line-height:1.6;max-width:420px;
+  font-size:13px;font-weight:400;letter-spacing:.5px;
+  color:rgba(255,255,255,.5);line-height:1.6;max-width:380px;
+  text-shadow:0 1px 8px rgba(0,0,0,.9);
   animation:visDesc .9s .25s both;
 }
 @keyframes visDesc{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -694,6 +690,19 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
     <div class="lk-slide" style="background-image:url('https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=1400&q=80')">
       <div class="lk-caption">GESTÃO AUTOMATIZADA</div>
     </div>
+    </div>
+
+    <!-- Orbs de profundidade -->
+    <div style="position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;">
+      <div style="position:absolute;width:600px;height:600px;border-radius:50%;
+        background:radial-gradient(circle,rgba(0,212,255,0.06) 0%,transparent 70%);
+        top:-100px;right:-100px;animation:orbFloat 10s ease-in-out infinite;filter:blur(40px);"></div>
+      <div style="position:absolute;width:400px;height:400px;border-radius:50%;
+        background:radial-gradient(circle,rgba(168,85,247,0.05) 0%,transparent 70%);
+        bottom:50px;left:-80px;animation:orbFloat 14s ease-in-out infinite reverse;filter:blur(50px);"></div>
+      <div style="position:absolute;width:300px;height:300px;border-radius:50%;
+        background:radial-gradient(circle,rgba(0,229,160,0.04) 0%,transparent 70%);
+        top:40%;left:40%;animation:orbFloat 8s ease-in-out infinite;filter:blur(60px);"></div>
     </div>
 
     <!-- Overlay grid -->
@@ -2287,219 +2296,217 @@ async function polling() {
     ctx.scale(devicePixelRatio, devicePixelRatio)
   }
   resize()
-  window.addEventListener('resize', () => { resize() })
+  window.addEventListener('resize', resize)
 
-  // ── Parâmetros do gráfico ──
-  const N = 55                    // candles visíveis
-  const CANDLE_MS = 2000          // duração de cada candle (ms)
-  let candles = []                // histórico completo
-  let candleAtual = null          // candle que está sendo formado AO VIVO
-  let tInicio = 0                 // quando o candle atual começou
-
-  // Preço de referência e random walk suave
-  let precoBase = 132500
-  let tendencia = 0               // tendência atual (-1 a +1)
-  let tTendencia = 0              // quando muda
+  // ── Config ──
+  const N = 48           // candles visíveis
+  const CANDLE_MS = 1800 // duração de cada candle
+  let candles = []
+  let candleAtual = null
+  let tInicio = 0
+  let tendencia = 0
+  let tTend = 0
+  let tickInterval, precoBase = 132500
 
   function novoPreco(prev) {
-    // Muda tendência a cada ~8s
-    if (Date.now() - tTendencia > 8000) {
-      tendencia = (Math.random() - 0.45) * 0.6
-      tTendencia = Date.now()
+    if (Date.now() - tTend > 7000) {
+      tendencia = (Math.random() - 0.44) * 0.7
+      tTend = Date.now()
     }
-    const volatilidade = 80 + Math.random() * 120
-    const drift = tendencia * volatilidade
-    return prev + drift + (Math.random() - 0.5) * volatilidade * 0.5
+    const vol = 90 + Math.random() * 140
+    return prev + tendencia * vol + (Math.random() - 0.5) * vol * 0.6
   }
 
   function gerarHistorico() {
     candles = []
-    let preco = precoBase
+    let p = precoBase
     for (let i = 0; i < N + 5; i++) {
-      const open  = preco
-      // Simula múltiplos ticks dentro do candle
-      let hi = open, lo = open, close = open
-      for (let t = 0; t < 8; t++) {
+      const open = p
+      let hi = p, lo = p, close = p
+      for (let t = 0; t < 10; t++) {
         close = novoPreco(close)
         hi = Math.max(hi, close)
         lo = Math.min(lo, close)
       }
       candles.push({ open, close, high: hi, low: lo, done: true })
-      preco = close
+      p = close
     }
-    precoBase = preco
+    precoBase = p
   }
 
-  function iniciarCandleAtual() {
+  function iniciarCandle() {
     const prev = candleAtual ? candleAtual.close
       : (candles.length ? candles[candles.length-1].close : precoBase)
     candleAtual = { open: prev, close: prev, high: prev, low: prev, done: false }
     tInicio = Date.now()
   }
 
-  // ── Tick: atualiza candle atual ──
-  let tickInterval = null
   function tick() {
     if (stopped || !candleAtual) return
-    const progresso = (Date.now() - tInicio) / CANDLE_MS
-
-    if (progresso >= 1) {
-      // Fecha candle atual e abre novo
+    if ((Date.now() - tInicio) / CANDLE_MS >= 1) {
       candleAtual.done = true
       candles.push({ ...candleAtual })
       if (candles.length > N + 10) candles.shift()
-      iniciarCandleAtual()
+      iniciarCandle()
     } else {
-      // Evolui preço do candle atual
-      const novoClose = novoPreco(candleAtual.close)
-      candleAtual.close = novoClose
-      candleAtual.high  = Math.max(candleAtual.high, novoClose)
-      candleAtual.low   = Math.min(candleAtual.low, novoClose)
+      const nc = novoPreco(candleAtual.close)
+      candleAtual.close = nc
+      candleAtual.high  = Math.max(candleAtual.high, nc)
+      candleAtual.low   = Math.min(candleAtual.low, nc)
     }
   }
 
-  // ── Desenha frame ──
   function draw() {
     if (stopped) return
     ctx.clearRect(0, 0, W, H)
 
-    // Candles para desenhar: histórico + atual
     const todos = [...candles.slice(-N), ...(candleAtual ? [candleAtual] : [])]
     if (todos.length < 2) { animFrame = requestAnimationFrame(draw); return }
 
-    // Escala de preço — baseada nos visíveis
     const prices = todos.flatMap(c => [c.high, c.low])
-    const minP   = Math.min(...prices)
-    const maxP   = Math.max(...prices)
-    const range  = (maxP - minP) || 500
-    const pad    = range * 0.15
+    const minP = Math.min(...prices), maxP = Math.max(...prices)
+    const range = (maxP - minP) || 500
+    const pad   = range * 0.18
 
-    // Área de desenho — evita sobrepor tags/título
-    const areaT = H * 0.12
-    const areaB = H * 0.42
+    // Área TODA a tela — sem reservar espaço para texto
+    const areaT = 20
+    const areaB = 20
     const areaH = H - areaT - areaB
 
     function py(p) {
       return areaT + areaH - ((p - (minP - pad)) / (range + pad * 2)) * areaH
     }
 
-    // ── Grid horizontal suave ──
-    ctx.strokeStyle = 'rgba(0,212,255,0.05)'
+    // ── Grid horizontal ──
     ctx.lineWidth = 1
-    for (let i = 0; i <= 5; i++) {
-      const y = areaT + (areaH / 5) * i
+    for (let i = 0; i <= 6; i++) {
+      const y = areaT + (areaH / 6) * i
+      const alpha = i === 0 || i === 6 ? 0.02 : 0.06
+      ctx.strokeStyle = `rgba(0,212,255,${alpha})`
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
+
+      // Label de preço nos gridlines
+      if (i > 0 && i < 6) {
+        const priceAtLine = (minP - pad) + ((range + pad*2) / areaH) * (areaH - (areaH/6)*i)
+        ctx.fillStyle = 'rgba(0,212,255,0.18)'
+        ctx.font = '9px "Space Mono", monospace'
+        ctx.fillText(priceAtLine.toFixed(0), 8, y - 3)
+      }
     }
 
-    // ── Grid vertical suave ──
-    ctx.strokeStyle = 'rgba(0,212,255,0.03)'
-    for (let i = 0; i <= 8; i++) {
-      const x = (W / 8) * i
-      ctx.beginPath(); ctx.moveTo(x, areaT); ctx.lineTo(x, areaT + areaH); ctx.stroke()
+    // ── Grid vertical ──
+    for (let i = 1; i < 8; i++) {
+      ctx.strokeStyle = 'rgba(0,212,255,0.03)'
+      ctx.beginPath()
+      ctx.moveTo((W/8)*i, areaT)
+      ctx.lineTo((W/8)*i, areaT + areaH)
+      ctx.stroke()
     }
 
-    // ── Candles ──
-    const cW  = W / (N + 1)
-    const gap = Math.max(cW * 0.15, 1)
+    // ── Candlesticks ──
+    const cW = W / (N + 1)
+    const gap = Math.max(cW * 0.12, 1)
     const bW  = Math.max(cW - gap * 2, 2)
 
     todos.forEach((c, i) => {
-      const alta = c.close >= c.open
+      const alta    = c.close >= c.open
       const isAtual = !c.done
-      const x   = i * cW + gap
-      const cx  = x + bW / 2
-      const yO  = py(c.open)
-      const yC  = py(c.close)
-      const yH  = py(c.high)
-      const yL  = py(c.low)
+      const x  = i * cW + gap
+      const cx = x + bW / 2
+      const yO = py(c.open),  yC = py(c.close)
+      const yH = py(c.high),  yL = py(c.low)
 
-      const corBase = alta ? [0,229,160] : [255,61,90]
-      const alfaCorp = isAtual ? 0.85 : 0.65
-      const alfaWick = isAtual ? 0.6  : 0.4
+      const rgb = alta ? '0,229,160' : '255,61,90'
+      const aCorp = isAtual ? 0.9 : 0.7
+      const aWick = isAtual ? 0.65 : 0.4
 
       // Pavio
-      ctx.strokeStyle = `rgba(${corBase},${alfaWick})`
-      ctx.lineWidth   = 1
+      ctx.strokeStyle = `rgba(${rgb},${aWick})`
+      ctx.lineWidth = isAtual ? 1.5 : 1
       ctx.beginPath(); ctx.moveTo(cx, yH); ctx.lineTo(cx, yL); ctx.stroke()
 
-      // Corpo
+      // Corpo com gradiente
       const bodyY = Math.min(yO, yC)
-      const bodyH = Math.max(Math.abs(yO - yC), 1.5)
-
-      // Gradiente no corpo
+      const bodyH = Math.max(Math.abs(yO - yC), 2)
       const grd = ctx.createLinearGradient(x, bodyY, x, bodyY + bodyH)
-      grd.addColorStop(0,   `rgba(${corBase},${alfaCorp})`)
-      grd.addColorStop(1,   `rgba(${corBase},${alfaCorp * 0.5})`)
+      grd.addColorStop(0, `rgba(${rgb},${aCorp})`)
+      grd.addColorStop(1, `rgba(${rgb},${aCorp * 0.4})`)
       ctx.fillStyle = grd
       ctx.fillRect(x, bodyY, bW, bodyH)
 
-      // Borda do corpo (mais brilhante no candle atual)
-      ctx.strokeStyle = `rgba(${corBase},${isAtual ? 1 : 0.8})`
-      ctx.lineWidth   = isAtual ? 1 : 0.5
+      // Borda
       if (isAtual) {
-        ctx.shadowColor = `rgba(${corBase},0.6)`
-        ctx.shadowBlur  = 8
+        ctx.shadowColor = `rgba(${rgb},0.7)`
+        ctx.shadowBlur  = 10
       }
+      ctx.strokeStyle = `rgba(${rgb},${isAtual ? 1 : 0.85})`
+      ctx.lineWidth   = isAtual ? 1 : 0.5
       ctx.strokeRect(x, bodyY, bW, bodyH)
       ctx.shadowBlur = 0
     })
 
-    // ── Linha de preço (close suavizado) ──
-    const closes = todos.map((c, i) => ({ x: i * cW + cW / 2, y: py(c.close) }))
+    // ── Área preenchida sob a linha de fechamento ──
+    const closes = todos.map((c, i) => ({ x: i * cW + cW/2, y: py(c.close) }))
 
-    // Área preenchida abaixo da linha
-    const grad = ctx.createLinearGradient(0, areaT, 0, areaT + areaH)
-    grad.addColorStop(0,   'rgba(0,212,255,0.12)')
-    grad.addColorStop(0.6, 'rgba(0,212,255,0.03)')
-    grad.addColorStop(1,   'rgba(0,212,255,0)')
+    const fillGrad = ctx.createLinearGradient(0, areaT, 0, areaT + areaH)
+    fillGrad.addColorStop(0,   'rgba(0,212,255,0.10)')
+    fillGrad.addColorStop(0.5, 'rgba(0,212,255,0.04)')
+    fillGrad.addColorStop(1,   'rgba(0,212,255,0)')
     ctx.beginPath()
     ctx.moveTo(closes[0].x, areaT + areaH)
     closes.forEach(p => ctx.lineTo(p.x, p.y))
     ctx.lineTo(closes[closes.length-1].x, areaT + areaH)
     ctx.closePath()
-    ctx.fillStyle = grad
+    ctx.fillStyle = fillGrad
     ctx.fill()
 
-    // Linha principal
+    // ── Linha de fechamento ──
     const lineGrad = ctx.createLinearGradient(0, 0, W, 0)
-    lineGrad.addColorStop(0,   'rgba(0,212,255,0.1)')
-    lineGrad.addColorStop(0.4, 'rgba(0,212,255,0.7)')
+    lineGrad.addColorStop(0,   'rgba(0,212,255,0.05)')
+    lineGrad.addColorStop(0.3, 'rgba(0,212,255,0.5)')
+    lineGrad.addColorStop(0.85,'rgba(0,212,255,0.95)')
     lineGrad.addColorStop(1,   'rgba(0,212,255,1)')
     ctx.beginPath()
     closes.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
     ctx.strokeStyle = lineGrad
-    ctx.lineWidth   = 1.5
+    ctx.lineWidth   = 2
     ctx.lineJoin    = 'round'
-    ctx.shadowColor = 'rgba(0,212,255,0.5)'
-    ctx.shadowBlur  = 8
+    ctx.shadowColor = 'rgba(0,212,255,0.6)'
+    ctx.shadowBlur  = 10
     ctx.stroke()
     ctx.shadowBlur  = 0
 
-    // ── Ponto vivo (último preço) ──
+    // ── Ponto vivo pulsante ──
     const lp = closes[closes.length - 1]
     const t  = Date.now() / 1000
+    const pulse = (Math.sin(t * 5) + 1) / 2
 
-    // Pulso externo
-    const pulse = (Math.sin(t * 4) + 1) / 2
+    // Halo externo
     ctx.beginPath()
-    ctx.arc(lp.x, lp.y, 6 + pulse * 4, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(0,212,255,${0.1 + pulse * 0.08})`
+    ctx.arc(lp.x, lp.y, 8 + pulse * 6, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(0,212,255,${0.05 + pulse * 0.06})`
     ctx.fill()
 
-    // Ponto central fixo
+    // Anel médio
     ctx.beginPath()
-    ctx.arc(lp.x, lp.y, 3.5, 0, Math.PI * 2)
+    ctx.arc(lp.x, lp.y, 5, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(0,212,255,${0.15 + pulse * 0.1})`
+    ctx.fill()
+
+    // Ponto central
+    ctx.beginPath()
+    ctx.arc(lp.x, lp.y, 3, 0, Math.PI * 2)
     ctx.fillStyle = '#00d4ff'
-    ctx.shadowColor = 'rgba(0,212,255,0.9)'
-    ctx.shadowBlur  = 16
+    ctx.shadowColor = 'rgba(0,212,255,1)'
+    ctx.shadowBlur  = 18
     ctx.fill()
     ctx.shadowBlur  = 0
 
     // ── Linha tracejada horizontal ──
-    ctx.setLineDash([3, 5])
+    ctx.setLineDash([3, 6])
     ctx.beginPath()
-    ctx.moveTo(lp.x + 5, lp.y)
-    ctx.lineTo(W - 60, lp.y)
+    ctx.moveTo(lp.x + 6, lp.y)
+    ctx.lineTo(W - 72, lp.y)
     ctx.strokeStyle = 'rgba(0,212,255,0.2)'
     ctx.lineWidth = 1
     ctx.stroke()
@@ -2507,30 +2514,34 @@ async function polling() {
 
     // ── Label de preço ──
     const precoStr = (candleAtual ? candleAtual.close : 0).toFixed(0)
-    const lblW = 54, lblH = 18, lblX = W - lblW - 2, lblY = lp.y - lblH/2
+    const lW = 62, lH = 20
+    const lX = W - lW - 4, lY = lp.y - lH/2
 
-    ctx.fillStyle = 'rgba(0,212,255,0.15)'
-    ctx.strokeStyle = 'rgba(0,212,255,0.5)'
+    ctx.fillStyle = 'rgba(0,8,16,0.85)'
+    ctx.strokeStyle = 'rgba(0,212,255,0.7)'
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.roundRect(lblX, lblY, lblW, lblH, 2)
-    ctx.fill(); ctx.stroke()
+    ctx.roundRect(lX, lY, lW, lH, 3)
+    ctx.fill()
+    ctx.shadowColor = 'rgba(0,212,255,0.4)'
+    ctx.shadowBlur  = 8
+    ctx.stroke()
+    ctx.shadowBlur  = 0
 
     ctx.fillStyle = '#00d4ff'
-    ctx.font = 'bold 9px "Space Mono", monospace'
+    ctx.font = 'bold 10px "Space Mono", monospace'
     ctx.textAlign = 'center'
-    ctx.fillText(precoStr, lblX + lblW/2, lblY + 12)
+    ctx.fillText(precoStr, lX + lW/2, lY + 13)
     ctx.textAlign = 'left'
 
     animFrame = requestAnimationFrame(draw)
   }
 
   gerarHistorico()
-  iniciarCandleAtual()
-  tickInterval = setInterval(tick, 50)   // atualiza 20x/s
+  iniciarCandle()
+  tickInterval = setInterval(tick, 40)
   draw()
 
-  // Para quando login some
   const ls = document.getElementById('login-screen')
   if (ls) {
     const obs = new MutationObserver(() => {
