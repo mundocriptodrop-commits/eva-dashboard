@@ -1480,7 +1480,7 @@ const S = {
 // ══════════════════════════════════════════
 // CLOCK
 // ══════════════════════════════════════════
-setInterval(()=>{ setText('clk', new Date().toLocaleTimeString('pt-BR',{hour12:false}) }, 1000))
+setInterval(()=>{ setText('clk', new Date().toLocaleTimeString('pt-BR',{hour12:false})) }, 1000)
 
 // ══════════════════════════════════════════
 // NAVEGAÇÃO
@@ -2061,7 +2061,7 @@ async function carregarIaAutoStatus() {
   // Última calibração
   if (m.ia_auto_ultima_revisao) {
     setText('ia-auto-ts',
-      new Date(m.ia_auto_ultima_revisao).toLocaleString('pt-BR')
+      new Date(m.ia_auto_ultima_revisao).toLocaleString('pt-BR'))
     setText('ia-auto-motivo', m.ia_auto_motivo || '—')
 
     // Mostra valores que a IA definiu
@@ -2692,12 +2692,18 @@ async function fazerLogin() {
 
   if (error) {
     btn.disabled=false; btn.querySelector('.login-btn-text').textContent='⚡ ACESSAR SISTEMA'
+    console.error('[EVA LOGIN ERROR]', error)
     const msgs = {
-      'Invalid login credentials': 'E-mail ou senha incorretos.',
-      'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
-      'Too many requests': 'Muitas tentativas. Aguarde alguns minutos.',
+      'Invalid login credentials':    'E-mail ou senha incorretos.',
+      'Email not confirmed':           'Confirme seu e-mail antes de entrar.',
+      'Too many requests':             'Muitas tentativas. Aguarde alguns minutos.',
+      'invalid claim: missing sub claim': 'Erro de configuração — contate o suporte.',
+      'User not found':                'Usuário não encontrado.',
+      'signup_disabled':               'Cadastro desabilitado. Use um usuário existente.',
     }
-    mostrarMsgLogin(msgs[error.message]||error.message)
+    const msgFinal = msgs[error.message] || `Erro: ${error.message}`
+    mostrarMsgLogin(msgFinal)
+    console.warn('[EVA LOGIN] Mensagem exibida:', msgFinal)
     return
   }
 
