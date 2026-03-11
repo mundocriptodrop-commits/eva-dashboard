@@ -910,11 +910,11 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
               border-radius:4px;margin-top:4px;">
               <div style="font-size:24px;margin-bottom:10px;opacity:.4;">🤖</div>
               <div style="font-family:var(--cond);font-size:13px;font-weight:700;
-                letter-spacing:2px;color:var(--text3);margin-bottom:6px;">
+                letter-spacing:2px;color:var(--text3);margin-bottom:6px;" id="aw-espera-label">
                 EM ESPERA
               </div>
-              <div style="font-size:11px;color:var(--text3);line-height:1.6;">
-                Nenhuma análise recebida ainda.
+              <div style="font-size:11px;color:var(--text3);line-height:1.6;" id="aw-espera-msg">
+                Aguardando análise do robô...
                 
               </div>
             </div>
@@ -983,10 +983,10 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
               <div style="font-size:24px;margin-bottom:10px;opacity:.4;">🤖</div>
               <div style="font-family:var(--cond);font-size:13px;font-weight:700;
                 letter-spacing:2px;color:var(--text3);margin-bottom:6px;">
-                EM ESPERA
+                <span id="ad-espera-label">EM ESPERA</span>
               </div>
-              <div style="font-size:11px;color:var(--text3);line-height:1.6;">
-                Nenhuma análise recebida ainda.
+              <div style="font-size:11px;color:var(--text3);line-height:1.6;" id="ad-espera-msg">
+                Aguardando análise do robô...
                 
               </div>
             </div>
@@ -1302,9 +1302,22 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
           <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--purple);margin-bottom:5px;">ÚLTIMA CALIBRAÇÃO DA IA</div>
           <div id="ia-auto-ts" style="font-size:10px;color:var(--text3);margin-bottom:4px;">—</div>
           <div id="ia-auto-motivo" style="font-size:11px;color:var(--text2);line-height:1.5;">—</div>
+          <div id="ia-auto-nunca" style="display:none;font-size:10px;color:var(--yellow);margin-top:6px;line-height:1.5;">
+            ⚠️ Ainda sem calibração.<br>
+            A IA calibra automaticamente às 17h05 após gerar o diário do dia.<br>
+            Na primeira vez, rode o robô por pelo menos 1 dia com trades.
+          </div>
         </div>
-        <!-- Botão salvar toggle IA -->
-        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="salvarIaAuto()">💾 SALVAR CONFIGURAÇÃO DE IA</button>
+        <!-- Histório de calibrações -->
+        <div id="ia-calib-hist" style="display:none;margin-bottom:10px;">
+          <div style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);margin-bottom:6px;">HISTÓRICO DE CALIBRAÇÕES</div>
+          <div id="ia-calib-lista" style="font-size:10px;color:var(--text2);line-height:1.8;max-height:100px;overflow-y:auto;"></div>
+        </div>
+        <!-- Botões -->
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn btn-primary" style="flex:1;" onclick="salvarIaAuto()">💾 SALVAR CONFIGURAÇÃO DE IA</button>
+          <button id="btn-calibrar-agora" class="btn" style="flex:0 0 auto;display:none;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.4);color:var(--purple);" onclick="calibrarAgora()" title="Força a IA a calibrar agora (requer robô online)">🤖 CALIBRAR AGORA</button>
+        </div>
       </div>
 
       <!-- LIMITES DE SEGURANÇA configuráveis -->
@@ -1399,34 +1412,80 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
 <!-- PAGE: MEMÓRIA IA -->
 <!-- ═══════════════════════════════════════ -->
 <div class="page" id="page-memoria">
-  <div class="g2">
-    <div>
+
+  <!-- FAIXA: KPIs gerais da memória -->
+  <div id="mem-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;"></div>
+
+  <div class="g2" style="gap:12px;">
+    <!-- Coluna esquerda -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Histórico por dia -->
       <div class="card">
-        <div class="ch"><span class="ct">📚 Aprendizados dos Diários</span><span id="aprend-cnt" style="font-size:10px;color:var(--text3)">0</span></div>
-        <div class="scrolly" id="aprend-lista" style="padding:0 14px 14px;">
-          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM APRENDIZADOS AINDA</div>
+        <div class="ch">
+          <span class="ct">📅 Histórico por Dia</span>
+          <span id="mem-dias-cnt" style="font-size:10px;color:var(--text3)">0 dias</span>
+        </div>
+        <div style="padding:0 14px 14px;">
+          <div id="mem-dias-tabela" style="overflow-x:auto;"></div>
         </div>
       </div>
+
+      <!-- Curva de evolução -->
+      <div class="card">
+        <div class="ch"><span class="ct">📈 Curva de Resultado Diário</span></div>
+        <div style="padding:0 14px 14px;">
+          <div id="mem-curva" style="height:120px;display:flex;align-items:flex-end;gap:3px;"></div>
+        </div>
+      </div>
+
+      <!-- Setups -->
       <div class="card">
         <div class="ch"><span class="ct">🎯 Setups — Memória Completa</span></div>
-        <div class="scrolly" id="mem-setups" style="padding:0 14px 14px;">
-          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM HISTÓRICO</div>
+        <div class="scrolly" id="mem-setups" style="padding:0 14px 14px;max-height:280px;">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM HISTÓRICO</div>
         </div>
       </div>
+
     </div>
-    <div>
+
+    <!-- Coluna direita -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Estatísticas quantitativas -->
       <div class="card">
-        <div class="ch"><span class="ct">📊 Estatísticas Gerais</span></div>
-        <div class="cb" id="mem-stats">
-          <div style="color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;text-align:center;padding:20px;">CARREGANDO...</div>
-        </div>
+        <div class="ch"><span class="ct">📊 Análise Quantitativa</span></div>
+        <div class="cb" id="mem-stats"></div>
       </div>
+
+      <!-- Horários -->
       <div class="card">
-        <div class="ch"><span class="ct">🕐 Memória por Horário</span></div>
+        <div class="ch"><span class="ct">🕐 Performance por Horário</span></div>
         <div class="cb">
           <div class="bar-wrap" id="bar-mem-horas"></div>
+          <div id="mem-hora-detalhe" style="font-family:var(--cond);font-size:10px;color:var(--text3);text-align:center;margin-top:6px;letter-spacing:1px;"></div>
         </div>
       </div>
+
+      <!-- Aprendizados + Recomendações -->
+      <div class="card">
+        <div class="ch">
+          <span class="ct">🧠 Aprendizados & Recomendações</span>
+          <span id="aprend-cnt" style="font-size:10px;color:var(--text3)">0</span>
+        </div>
+        <div class="scrolly" id="aprend-lista" style="padding:0 14px 14px;max-height:280px;">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM APRENDIZADOS AINDA</div>
+        </div>
+      </div>
+
+      <!-- Tendência recente -->
+      <div class="card">
+        <div class="ch"><span class="ct">📉 Tendência & Calibração</span></div>
+        <div class="cb" id="mem-tendencia">
+          <div style="color:var(--text3);font-family:var(--cond);font-size:11px;text-align:center;">AGUARDANDO DADOS...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1477,7 +1536,7 @@ function setVal(id, val) {
 // ══════════════════════════════════════════
 const S = {
   ticks:{}, ticksRef:{}, analises:{}, posicoes:{},
-  trades:[], alertas:[], aprendizados:[],
+  trades:[], alertas:[], aprendizados:[], diasPerf:[],
   perfDia:null, setups:[], horarios:[], stats:{}, diario:null, sistema:{}
 }
 
@@ -1495,7 +1554,10 @@ function navTo(p) {
   document.getElementById('page-'+p).classList.add('ativo')
   event.target.classList.add('ativo')
   if(p==='performance') { renderHoras(); renderSetups() }
-  if(p==='memoria') { renderMemSetups(); renderMemStats(); renderMemHoras() }
+  if(p==='memoria') {
+    renderMemKpis(); renderMemDias(); renderMemCurva();
+    renderMemSetups(); renderMemStats(); renderMemHoras(); renderMemTendencia()
+  }
   if(p==='diario') renderDiario()
 }
 
@@ -1520,6 +1582,14 @@ function toast(msg, tipo='a') {
 // ══════════════════════════════════════════
 // RENDER TICKS
 // ══════════════════════════════════════════
+function _proximaAbertura() {
+  const d = new Date()
+  const dia = d.getDay()
+  let add = dia === 5 ? 3 : dia === 6 ? 2 : 1
+  const prox = new Date(d); prox.setDate(prox.getDate()+add)
+  return prox.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'}) + ' às 09h00'
+}
+
 function renderTick(t) {
   const isW = t.symbol?.startsWith('WIN')
   const pre = isW ? 'win' : 'wdo'
@@ -1702,6 +1772,22 @@ function renderAnalise(a) {
 // ══════════════════════════════════════════
 // RENDER POSIÇÃO
 // ══════════════════════════════════════════
+async function _recarregarPosicaoPerf() {
+  // Recarga leve: só posição aberta e performance — não recarrega tudo
+  try {
+    const {data:pos} = await sb.from('posicoes_abertas').select('*').eq('status','aberta')
+    S.posicoes = {}
+    pos?.forEach(p=>{ S.posicoes[p.symbol]=p })
+    renderPosicao()
+    const hoje = new Date().toISOString().split('T')[0]
+    const {data:perf} = await sb.from('performance_dia').select('*').eq('data',hoje).maybeSingle()
+    if (perf) { S.perfDia=perf; renderPerf() }
+    // Recarrega trades do dia
+    const {data:trs} = await sb.from('trades').select('*').gte('ts_saida',hoje+'T00:00:00').order('ts_saida',{ascending:false})
+    if (trs) { S.trades=trs; renderHistorico() }
+  } catch(e) { console.error('_recarregarPosicaoPerf:', e) }
+}
+
 function renderPosicao() {
   const pos = Object.values(S.posicoes).find(p=>p.status==='aberta')
   const el  = document.getElementById('pos-content')
@@ -1881,18 +1967,165 @@ function renderAprendizados() {
   ).join('')
 }
 
+// ══════════════════════════════════════════
+// RENDER MEMÓRIA — MÓDULOS QUANTITATIVOS
+// ══════════════════════════════════════════
+
+function renderMemKpis() {
+  const st  = S.stats
+  const dias = S.diasPerf || []
+  const wr   = parseFloat(st.win_rate_geral||0)
+  const res  = parseFloat(st.resultado_total||0)
+  const fl_list = dias.filter(d=>d.fator_lucro).map(d=>parseFloat(d.fator_lucro))
+  const fl   = fl_list.length ? (fl_list.reduce((a,b)=>a+b,0)/fl_list.length).toFixed(2) : '—'
+  const exp_list = dias.filter(d=>d.expectativa_pts!=null).map(d=>parseFloat(d.expectativa_pts))
+  const exp  = exp_list.length ? (exp_list.reduce((a,b)=>a+b,0)/exp_list.length).toFixed(2) : '—'
+  const dias_pos = dias.filter(d=>parseFloat(d.resultado||0)>0).length
+  const kpi = (lbl,val,cls='neu',sub='') => `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px 12px;text-align:center;">
+      <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:4px;">${lbl}</div>
+      <div class="perf-num ${cls}" style="font-size:18px;">${val}</div>
+      ${sub?`<div style="font-size:9px;color:var(--text3);margin-top:2px;">${sub}</div>`:''}
+    </div>`
+  document.getElementById('mem-kpis').innerHTML =
+    kpi('TOTAL TRADES', st.total_trades||0, 'neu') +
+    kpi('WIN RATE GERAL', wr.toFixed(0)+'%', wr>=60?'pos':wr>=40?'neu':'neg') +
+    kpi('RESULTADO TOTAL', (res>=0?'+':'')+'R$'+Math.abs(res).toFixed(0), res>=0?'pos':'neg') +
+    kpi('FATOR LUCRO', fl, parseFloat(fl)>=1.5?'pos':parseFloat(fl)>=1?'neu':'neg', 'ideal >1.5') +
+    kpi('EXPECTATIVA/TRADE', exp!='—'?(parseFloat(exp)>=0?'+':'')+exp:'—', parseFloat(exp)>=0?'pos':'neg', 'R$ por trade')
+}
+
+function renderMemDias() {
+  const dias = S.diasPerf || []
+  setText('mem-dias-cnt', dias.length + ' dias')
+  if (!dias.length) {
+    document.getElementById('mem-dias-tabela').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM HISTÓRICO DE DIAS</div>'
+    return
+  }
+  const rows = [...dias].sort((a,b)=>b.data.localeCompare(a.data)).map(d=>{
+    const res = parseFloat(d.resultado||0)
+    const wr  = parseFloat(d.win_rate||0)
+    const fl  = d.fator_lucro ? parseFloat(d.fator_lucro).toFixed(2) : '—'
+    const exp = d.expectativa_pts != null ? (parseFloat(d.expectativa_pts)>=0?'+':'')+parseFloat(d.expectativa_pts).toFixed(1) : '—'
+    const cls = res>0?'pos':res<0?'neg':'neu'
+    return `<tr>
+      <td style="color:var(--text2);font-family:var(--cond);font-size:10px;padding:5px 6px;">${d.data}</td>
+      <td style="text-align:center;font-family:var(--cond);font-size:10px;">${d.trades||0}</td>
+      <td style="text-align:center;font-family:var(--cond);font-size:10px;color:${wr>=60?'var(--green)':wr>=40?'var(--yellow)':'var(--red)'};">${wr.toFixed(0)}%</td>
+      <td style="text-align:right;font-family:var(--cond);font-size:11px;font-weight:700;" class="${cls}">${res>=0?'+':''}R$${Math.abs(res).toFixed(0)}</td>
+      <td style="text-align:center;font-family:var(--cond);font-size:10px;color:var(--text3);">${fl}</td>
+      <td style="text-align:center;font-family:var(--cond);font-size:10px;color:var(--text3);">${exp}</td>
+      <td style="font-family:var(--cond);font-size:9px;color:var(--yellow);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.melhor_setup||''}">${(d.melhor_setup||'—').substring(0,18)}</td>
+    </tr>`
+  }).join('')
+  document.getElementById('mem-dias-tabela').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid var(--border);">
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:left;padding:4px 6px;">DATA</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:center;padding:4px;">T</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:center;padding:4px;">WR%</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:right;padding:4px;">RESULTADO</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:center;padding:4px;">FATOR</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:center;padding:4px;">EXPECT.</th>
+        <th style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--text3);text-align:left;padding:4px;">MELHOR SETUP</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`
+}
+
+function renderMemCurva() {
+  const dias = [...(S.diasPerf||[])].sort((a,b)=>a.data.localeCompare(b.data)).slice(-20)
+  const el = document.getElementById('mem-curva')
+  if (!dias.length) { el.innerHTML='<span style="color:var(--text3);font-size:11px;margin:auto;">SEM DADOS</span>'; return }
+  const vals = dias.map(d=>parseFloat(d.resultado||0))
+  const max = Math.max(...vals.map(Math.abs), 1)
+  const mid = 60 // px da linha zero
+  el.innerHTML = dias.map((d,i)=>{
+    const v = vals[i]
+    const h = Math.max(4, Math.abs(v)/max*55)
+    const cor = v>=0?'var(--green)':'var(--red)'
+    const top = v>=0 ? mid-h : mid
+    return `<div style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;cursor:default;"
+      title="${d.data}: ${v>=0?'+':''}R$${v.toFixed(0)} | WR:${parseFloat(d.win_rate||0).toFixed(0)}%">
+      <div style="position:absolute;top:${top}px;width:100%;height:${h}px;background:${cor};opacity:.75;border-radius:2px;"></div>
+      <div style="position:absolute;top:${mid-1}px;width:100%;height:1px;background:var(--border);"></div>
+      <div style="position:absolute;bottom:0;font-family:var(--cond);font-size:8px;color:var(--text3);">${d.data.slice(5)}</div>
+    </div>`
+  }).join('')
+}
+
+function renderMemTendencia() {
+  const dias = [...(S.diasPerf||[])].sort((a,b)=>b.data.localeCompare(a.data))
+  const el   = document.getElementById('mem-tendencia')
+  if (dias.length < 3) { el.innerHTML='<div style="color:var(--text3);font-family:var(--cond);font-size:11px;text-align:center;padding:12px;">MÍNIMO 3 DIAS PARA ANÁLISE</div>'; return }
+  const ult3  = dias.slice(0,3).reduce((s,d)=>s+parseFloat(d.resultado||0),0)
+  const ant   = dias.slice(3).reduce((s,d)=>s+parseFloat(d.resultado||0),0)
+  const nAnt  = Math.max(dias.length-3,1)
+  const medAnt = ant/nAnt
+  const trend = ult3/3 > medAnt*1.1 ? '📈 MELHORA' : ult3/3 < medAnt*0.9 ? '📉 PIORA' : '➡️ ESTÁVEL'
+  const tCls  = trend.includes('MELHORA')?'pos':trend.includes('PIORA')?'neg':'neu'
+  // Fator de lucro médio
+  const fl_vals = dias.filter(d=>d.fator_lucro).map(d=>parseFloat(d.fator_lucro))
+  const fl_med  = fl_vals.length ? fl_vals.reduce((a,b)=>a+b,0)/fl_vals.length : null
+  // Melhor e pior horário acumulado
+  const todasHoras = {}
+  dias.forEach(d=>{
+    let ph = d.por_hora
+    if (typeof ph === 'string') { try { ph=JSON.parse(ph) } catch{ph={}} }
+    if (typeof ph === 'object' && ph) {
+      Object.entries(ph).forEach(([h,v])=>{
+        if (!todasHoras[h]) todasHoras[h]={trades:0,ganho:0}
+        todasHoras[h].trades += parseInt(v.trades||0)
+        todasHoras[h].ganho  += parseFloat(v.ganho||0)
+      })
+    }
+  })
+  const horasFilt = Object.entries(todasHoras).filter(([,v])=>v.trades>=2)
+  const melhorH = horasFilt.length ? horasFilt.reduce((a,b)=>b[1].ganho>a[1].ganho?b:a) : null
+  const piorH   = horasFilt.length ? horasFilt.reduce((a,b)=>b[1].ganho<a[1].ganho?b:a) : null
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+        <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);">TENDÊNCIA RECENTE</div>
+        <div class="perf-num ${tCls}" style="font-size:16px;margin-top:4px;">${trend}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">Últ 3d: R$${(ult3/3).toFixed(0)}/dia vs R$${medAnt.toFixed(0)}/dia anterior</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+        <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);">FATOR LUCRO MÉDIO</div>
+        <div class="perf-num ${fl_med?fl_med>=1.5?'pos':fl_med>=1?'neu':'neg':'neu'}" style="font-size:16px;margin-top:4px;">${fl_med?fl_med.toFixed(2):'—'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">ideal: acima de 1.5</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+        <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--green);">✅ MELHOR HORÁRIO</div>
+        <div style="font-family:var(--cond);font-size:16px;font-weight:700;color:var(--green);margin-top:4px;">${melhorH?melhorH[0]+'h':'—'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${melhorH?'R$'+melhorH[1].ganho.toFixed(0)+' em '+melhorH[1].trades+'t':''}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center;">
+        <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--red);">❌ PIOR HORÁRIO</div>
+        <div style="font-family:var(--cond);font-size:16px;font-weight:700;color:var(--red);margin-top:4px;">${piorH&&piorH[0]!=(melhorH&&melhorH[0])?piorH[0]+'h':'—'}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${piorH&&piorH[0]!=(melhorH&&melhorH[0])?'R$'+piorH[1].ganho.toFixed(0)+' em '+piorH[1].trades+'t':''}</div>
+      </div>
+    </div>`
+}
+
 function renderMemSetups() {
   const el = document.getElementById('mem-setups')
   if (!S.setups.length) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM HISTÓRICO</div>'; return }
-  el.innerHTML = [...S.setups].sort((a,b)=>b.resultado-a.resultado).map(s=>{
-    const wr = parseFloat(s.win_rate||0)
+  el.innerHTML = [...S.setups].sort((a,b)=>parseFloat(b.resultado||0)-parseFloat(a.resultado||0)).map(s=>{
+    const wr  = parseFloat(s.win_rate||0)
+    const res = parseFloat(s.resultado||0)
     const cls = wr>=65?'bom':wr>=45?'medio':'ruim'
     return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;">
-        <span style="font-family:var(--cond);font-size:11px;">${s.setup}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:var(--cond);font-size:11px;flex:1;margin-right:8px;">${s.setup}</span>
         <span class="mem-wr ${cls}">${wr.toFixed(0)}% WR</span>
       </div>
-      <div style="font-size:10px;color:var(--text3);">${s.trades}t · R$${parseFloat(s.resultado||0).toFixed(0)} · conf ${parseFloat(s.confianca_media||0).toFixed(0)}%</div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px;">
+        <span>${s.trades}t · conf ${parseFloat(s.confianca_media||0).toFixed(0)}%</span>
+        <span class="${res>=0?'pos':'neg'}">${res>=0?'+':''}R$${Math.abs(res).toFixed(0)}</span>
+      </div>
+      <div class="mem-bar" style="margin-top:4px;"><div class="mem-fill ${cls}" style="width:${wr}%"></div></div>
     </div>`
   }).join('')
 }
@@ -1900,43 +2133,38 @@ function renderMemSetups() {
 function renderMemStats() {
   const el = document.getElementById('mem-stats')
   const st = S.stats
-  if (!Object.keys(st).length) { el.innerHTML='<div style="color:var(--text3);text-align:center;font-family:var(--cond);font-size:11px;">CARREGANDO...</div>'; return }
+  if (!Object.keys(st).length) { el.innerHTML='<div style="color:var(--text3);text-align:center;font-family:var(--cond);font-size:11px;padding:20px;">CARREGANDO...</div>'; return }
   const wr  = parseFloat(st.win_rate_geral||0)
   const res = parseFloat(st.resultado_total||0)
-  el.innerHTML = `
-    <div class="g2" style="gap:8px;">
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
-        <div class="perf-lbl">TOTAL TRADES</div>
-        <div class="perf-num neu">${st.total_trades||0}</div>
-      </div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
-        <div class="perf-lbl">WIN RATE GERAL</div>
-        <div class="perf-num ${wr>=60?'pos':wr>=40?'neu':'neg'}">${wr.toFixed(0)}%</div>
-      </div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
-        <div class="perf-lbl">RESULTADO TOTAL</div>
-        <div class="perf-num ${res>=0?'pos':'neg'}">${res>=0?'+':''}R$${Math.abs(res).toFixed(0)}</div>
-      </div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
-        <div class="perf-lbl">MELHOR SETUP</div>
-        <div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--yellow)">${st.melhor_setup||'—'}</div>
-      </div>
+  const kpi = (lbl,val,cls='neu',sub='') => `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;text-align:center;">
+      <div class="perf-lbl">${lbl}</div>
+      <div class="perf-num ${cls}">${val}</div>
+      ${sub?`<div style="font-size:9px;color:var(--text3);margin-top:1px;">${sub}</div>`:''}
     </div>`
+  el.innerHTML = `<div class="g2" style="gap:8px;">
+    ${kpi('TOTAL TRADES', st.total_trades||0, 'neu', (st.total_ganhos||0)+'G / '+(st.total_perdas||0)+'P')}
+    ${kpi('WIN RATE', wr.toFixed(0)+'%', wr>=60?'pos':wr>=40?'neu':'neg')}
+    ${kpi('RESULTADO', (res>=0?'+':'')+'R$'+Math.abs(res).toFixed(0), res>=0?'pos':'neg')}
+    ${kpi('MELHOR SETUP', '★', 'neu', (st.melhor_setup||'—').substring(0,16))}
+    ${kpi('PIOR SETUP', '✗', 'neg', (st.pior_setup||'—').substring(0,16))}
+    ${kpi('MELHOR HORÁRIO', st.melhor_horario||'—', 'pos')}
+  </div>`
 }
 
 function renderMemHoras() {
-  const el = document.getElementById('bar-mem-horas')
+  const el   = document.getElementById('bar-mem-horas')
+  const det  = document.getElementById('mem-hora-detalhe')
   const horas = S.horarios.filter(h=>h.hora>=8&&h.hora<=17&&h.trades>0)
   if (!horas.length) { el.innerHTML='<span style="color:var(--text3);font-size:11px;">SEM DADOS</span>'; return }
-  const max = Math.max(...horas.map(h=>h.trades),1)
+  const maxT = Math.max(...horas.map(h=>h.trades),1)
   el.innerHTML = horas.map(h=>{
     const wr  = parseFloat(h.win_rate||0)
-    const alt = Math.max(6,(h.trades/max)*72)
+    const alt = Math.max(6,(h.trades/maxT)*72)
     const cor = wr>=65?'var(--green)':wr>=45?'var(--yellow)':'var(--red)'
-    return `<div class="bar-col">
-      <div class="bar" style="height:${alt}px;background:${cor};opacity:.8;"
-        title="${h.hora}h: ${h.trades}t WR${wr.toFixed(0)}%"
-        onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8"></div>
+    const res = parseFloat(h.resultado||0)
+    return `<div class="bar-col" onmouseover="document.getElementById('mem-hora-detalhe').textContent='${h.hora}h: ${h.trades} trades | WR ${wr.toFixed(0)}% | R$${res>=0?'+':''}${res.toFixed(0)}'" onmouseout="document.getElementById('mem-hora-detalhe').textContent=''">
+      <div class="bar" style="height:${alt}px;background:${cor};opacity:.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8"></div>
       <div class="bar-lbl">${h.hora}h</div>
     </div>`
   }).join('')
@@ -2037,6 +2265,35 @@ function toggleIaAuto() {
 }
 
 function atualizarUiIaAuto(ativo) {
+  // Quando IA controla limites, desabilita conf/lote/trades em TODOS os painéis
+  const inputsIa = ['lim-conf-input','lim-lote-input','lim-trades-input','cfg-conf','cfg-lmax']
+  inputsIa.forEach(id => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.disabled = ativo
+      el.style.opacity = ativo ? '0.45' : '1'
+      el.style.cursor  = ativo ? 'not-allowed' : ''
+      el.title = ativo ? '🤖 Controlado pela IA — desative a calibração automática para editar manualmente' : ''
+    }
+  })
+  // Aviso visual no painel de configuração principal
+  const cfgConfRow = document.getElementById('cfg-conf')?.closest('div')
+  if (cfgConfRow) {
+    const badge = cfgConfRow.querySelector('.ia-auto-badge') || (() => {
+      const b = document.createElement('span')
+      b.className = 'ia-auto-badge'
+      b.style.cssText = 'font-size:9px;color:var(--purple);font-family:var(--cond);letter-spacing:1px;margin-left:6px;'
+      b.textContent = '🤖 IA'
+      cfgConfRow.querySelector('label')?.appendChild(b)
+      return b
+    })()
+    badge.style.display = ativo ? 'inline' : 'none'
+  }
+  // Botão salvar limites: aviso quando ativo
+  const btnSalvar = document.getElementById('btn-salvar-limites')
+  if (btnSalvar) {
+    btnSalvar.title = ativo ? '⚠️ Apenas a perda máxima será aplicada — demais limites são controlados pela IA' : ''
+  }
   const tog    = document.getElementById('tog-ia-auto')
   const manuais = document.getElementById('limites-manuais')
   const iaAtivo = document.getElementById('limites-ia-ativo')
@@ -2066,13 +2323,12 @@ async function salvarLimites() {
   const tradMax   = document.getElementById('lim-trades-input').value
   const iaAuto    = document.getElementById('tog-ia-auto').classList.contains('on')
 
-  const campos = [
-    ['perda_max_dia',    perdaMax],
-    ['confianca_minima', confMin],
-    ['lote_max',         loteMax],
-    ['trades_max_dia',   tradMax],
-    ['ia_auto_limites',  iaAuto.toString()],
-  ]
+  // Quando IA controla limites, só salva perda_max (freio absoluto do usuário)
+  const camposBase = [['ia_auto_limites', iaAuto.toString()], ['perda_max_dia', perdaMax]]
+  const camposManual = iaAuto
+    ? []  // IA no controle — não sobrescreve conf/lote/trades
+    : [['confianca_minima', confMin], ['lote_max', loteMax], ['trades_max_dia', tradMax]]
+  const campos = [...camposBase, ...camposManual]
   // Sincroniza também nos inputs principais
   document.getElementById('cfg-perda').value = perdaMax
   document.getElementById('cfg-conf').value  = confMin
@@ -2092,11 +2348,29 @@ async function salvarLimites() {
   }
 }
 
+async function calibrarAgora() {
+  const btn = document.getElementById('btn-calibrar-agora')
+  btn.disabled = true
+  btn.textContent = '⏳ CALIBRANDO...'
+  try {
+    // Insere um alerta especial que o robô monitora
+    await sb.from('alertas').insert({
+      tipo: 'calibrar_agora',
+      mensagem: 'Solicitação manual de calibração via dashboard'
+    })
+    toast('🤖 Solicitação enviada ao robô — aguarde até 30s', 'c')
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='🤖 CALIBRAR AGORA'; carregarIaAutoStatus() }, 35000)
+  } catch(e) {
+    toast('Erro ao solicitar calibração: '+e.message, 'v')
+    btn.disabled=false; btn.textContent='🤖 CALIBRAR AGORA'
+  }
+}
+
 async function carregarIaAutoStatus() {
   const { data } = await sb.from('configuracoes')
     .select('chave,valor')
     .in('chave', ['ia_auto_limites','ia_auto_ultima_revisao','ia_auto_motivo',
-                  'perda_max_dia','confianca_minima','lote_max','trades_max_dia'])
+                  'ia_auto_ultima_label','perda_max_dia','confianca_minima','lote_max','trades_max_dia'])
   if (!data) return
 
   const m = Object.fromEntries(data.map(r => [r.chave, r.valor]))
@@ -2111,14 +2385,62 @@ async function carregarIaAutoStatus() {
   if (m.lote_max)         document.getElementById('lim-lote-input').value  = m.lote_max
   if (m.trades_max_dia)   document.getElementById('lim-trades-input').value = m.trades_max_dia
 
-  // Última calibração
-  if (m.ia_auto_ultima_revisao) {
-    setText('ia-auto-ts',
-      new Date(m.ia_auto_ultima_revisao).toLocaleString('pt-BR'))
-    setText('ia-auto-motivo', m.ia_auto_motivo || '—')
+  // Última calibração — usa label legível (ex: "[11/03 17:05] conf: 68%→72% | trades: 5→4")
+  const label  = m.ia_auto_ultima_label
+  const ts     = m.ia_auto_ultima_revisao
+  const temLabel = label && label.trim().length > 0
+  const temTs    = ts && ts.trim().length > 0
+  const temCalibracao = temLabel || temTs
 
-    // Mostra valores que a IA definiu
-    if (ativo) {
+  document.getElementById('ia-auto-nunca').style.display = (!temCalibracao && ativo) ? 'block' : 'none'
+  document.getElementById('btn-calibrar-agora').style.display = ativo ? 'inline-flex' : 'none'
+
+  if (temCalibracao) {
+    // Label legível tem prioridade — é mais informativo que só a data
+    const tsDisplay = temLabel
+      ? label
+      : ('🤖 Calibrado em: ' + new Date(ts).toLocaleString('pt-BR'))
+    setText('ia-auto-ts', tsDisplay)
+    const motivoDisplay = m.ia_auto_motivo && m.ia_auto_motivo.trim()
+      ? m.ia_auto_motivo
+      : '—'
+    setText('ia-auto-motivo', motivoDisplay)
+  } else if (ativo) {
+    // Nunca calibrou — explica quando vai acontecer
+    const agora = new Date()
+    const fimPregao = new Date(); fimPregao.setHours(17,5,0,0)
+    const jaPasso   = agora > fimPregao
+    if (jaPasso) {
+      setText('ia-auto-ts', '⏳ 1ª calibração ocorre no próximo pregão às 17h05')
+    } else {
+      const diffMin = Math.round((fimPregao - agora)/60000)
+      setText('ia-auto-ts', `⏳ 1ª calibração em ~${diffMin}min (às 17h05, ao fechar o pregão)`)
+    }
+    setText('ia-auto-motivo', `Limites atuais em uso: conf ${m.confianca_minima||68}% · lote máx ${m.lote_max||3} · max ${m.trades_max_dia||5} trades/dia`)
+  } else {
+    setText('ia-auto-ts', '—')
+    setText('ia-auto-motivo', 'Você controla os limites manualmente')
+  }
+
+  // Carrega histórico de calibrações
+  if (ativo) {
+    sb.from('historico_calibracoes').select('ts,valor_antes,valor_depois,motivo').order('ts',{ascending:false}).limit(5)
+      .then(({data:hist})=>{
+        if (hist && hist.length) {
+          document.getElementById('ia-calib-hist').style.display = 'block'
+          document.getElementById('ia-calib-lista').innerHTML = hist.map(h=>{
+            const dt = new Date(h.ts).toLocaleDateString('pt-BR')
+            return `<div style="border-bottom:1px solid var(--border);padding:3px 0;">
+              <span style="color:var(--text3);">${dt}</span> ${h.motivo||'—'}
+              <div style="color:var(--text3);font-size:9px;">${h.valor_antes||''} → ${h.valor_depois||''}</div>
+            </div>`
+          }).join('')
+        }
+      })
+  }
+
+  // Mostra valores que a IA definiu
+  if (ativo) {
       document.getElementById('limites-ia-valores').innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
@@ -2130,7 +2452,6 @@ async function carregarIaAutoStatus() {
             <div style="font-family:var(--cond);font-size:16px;font-weight:700;color:var(--purple)">${m.lote_max||'—'}</div>
           </div>
         </div>`
-    }
   }
 }
 
@@ -2139,17 +2460,27 @@ async function salvarConfig() {
   st.textContent = '⏳ Salvando...'
   st.style.color = 'var(--yellow)'
 
+  // Quando IA controla limites, confianca e lote não podem ser sobrescritos pelo usuário
+  const iaAutoAtivo = document.getElementById('tog-ia-auto')?.classList.contains('on')
+
   const campos = [
     ['api_key_openai',   document.getElementById('cfg-key-openai').value],
     ['api_key_anthropic',document.getElementById('cfg-key-anthropic').value],
-    ['confianca_minima', document.getElementById('cfg-conf').value],
-    ['perda_max_dia',    document.getElementById('cfg-perda').value],
+    // Confiança e lote só salvos se IA NÃO controla — evita sobrescrever calibração
+    ...(!iaAutoAtivo ? [
+      ['confianca_minima', document.getElementById('cfg-conf').value],
+      ['lote_max',         document.getElementById('cfg-lmax').value],
+    ] : []),
+    ['perda_max_dia',    document.getElementById('cfg-perda').value],  // freio absoluto — sempre salva
     ['lote_min',         document.getElementById('cfg-lmin').value],
-    ['lote_max',         document.getElementById('cfg-lmax').value],
     ['scout_modelo',     document.querySelector('#modelos-grid .model-card.sel')?.dataset.m||''],
     ['decisor_modelo',   document.querySelector('#decisor-grid .model-card.sel')?.dataset.m||'gpt-4o'],
     ['modo_ia',          document.querySelector('.modo-card.sel')?.id.replace('mc-','')||'simples'],
   ].filter(([_, v]) => v)  // ignora campos vazios
+
+  if (iaAutoAtivo) {
+    st.textContent = '⏳ Salvando (limites protegidos pela IA)...'
+  }
 
   try {
     // Salva tudo em paralelo — muito mais rápido
@@ -2246,11 +2577,32 @@ async function carregarTudo() {
     tks?.forEach(t=>renderTick(t))
   }
 
-  // Análises — só exibe se for recente (últimos 30 min); se velha mostra EM ESPERA
-  const tsLimite = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-  const {data:anals} = await sb.from('analises').select('*').gte('ts', tsLimite).order('ts',{ascending:false}).limit(4)
-  const visto=new Set()
+  // Análises — detecta fim de pregão e mostra mensagem adequada
+  const agora = new Date()
+  const horaLocal = agora.getHours() + agora.getMinutes()/60
+  const fimPregao = horaLocal >= 17.08 || horaLocal < 8.75
+  const tsLimite  = new Date(Date.now() - 30*60*1000).toISOString()
+  const {data:anals} = await sb.from('analises').select('*').gte('ts',tsLimite).order('ts',{ascending:false}).limit(4)
+  const visto = new Set()
   anals?.forEach(a=>{ if(!visto.has(a.symbol)){visto.add(a.symbol);renderAnalise(a)} })
+
+  // Para símbolos sem análise recente — exibe estado correto
+  for (const [pre, abId] of [['aw','win-ab'],['ad','wdo-ab']]) {
+    const aguardEl = document.getElementById(`${pre}-aguardando`)
+    if (!aguardEl || aguardEl.style.display === 'none') continue
+    const labelEl = document.getElementById(`${pre}-espera-label`)
+    const msgEl   = document.getElementById(`${pre}-espera-msg`)
+    if (!labelEl || !msgEl) continue
+    if (fimPregao) {
+      labelEl.textContent = '🔒 PREGÃO ENCERRADO'
+      const abEl = document.getElementById(abId)
+      const ab   = abEl && abEl.textContent !== '—' ? ` | Abertura: ${abEl.textContent}` : ''
+      msgEl.innerHTML = `Mercado fechado. Próxima sessão: <b>${_proximaAbertura()}</b>${ab}`
+    } else {
+      labelEl.textContent = '⏳ EM ESPERA'
+      msgEl.textContent = 'Aguardando análise do robô...'
+    }
+  }
 
   // Posições
   const {data:pos} = await sb.from('posicoes_abertas').select('*').eq('status','aberta')
@@ -2259,6 +2611,10 @@ async function carregarTudo() {
 
   // Performance
   const {data:pf} = await sb.from('performance_dia').select('*').eq('data',hoje).maybeSingle()
+  // Histórico dos últimos 30 dias (para memória quantitativa)
+  const {data:diasHist} = await sb.from('performance_dia')
+    .select('*').order('data',{ascending:false}).limit(30)
+  if (diasHist) S.diasPerf = diasHist.filter(d=>parseInt(d.trades||0)>0)
   if (pf) { S.perfDia=pf; renderPerf() }
 
   // Trades
@@ -2348,23 +2704,66 @@ function iniciarRealtime() {
   sb.channel('rt-posicoes')
     .on('postgres_changes',{event:'*',schema:'public',table:'posicoes_abertas'},p=>{
       const row = p.new || p.old || {}
+      const evt = p.eventType || p.type || ''
+
       if (row.status === 'aberta') {
+        // Posição aberta — mostra imediatamente
         S.posicoes[row.symbol] = row
-      } else if (row.symbol) {
-        delete S.posicoes[row.symbol]
+        renderPosicao()
+        toast(`📈 Posição aberta: ${row.tipo} ${row.symbol} @ ${parseFloat(row.entrada||0).toFixed(0)}`, row.tipo==='COMPRA'?'c':'v')
+
+      } else if (row.status === 'fechada' || evt === 'DELETE') {
+        // Posição fechada — remove e mostra toast
+        const sym = row.symbol
+        const old = S.posicoes[sym]
+        delete S.posicoes[sym]
+        renderPosicao()
+        if (old) {
+          const pnl = parseFloat(row.pnl_brl || old.pnl_brl || 0)
+          const emoji = pnl >= 0 ? '✅' : '❌'
+          toast(`${emoji} Posição fechada: ${old.tipo} ${sym} | ${pnl>=0?'+':''}R$${Math.abs(pnl).toFixed(2)}`, pnl>=0?'c':'v')
+        }
+
+      } else if (evt === 'UPDATE' && row.symbol) {
+        // Atualização de P&L — atualiza silenciosamente
+        if (S.posicoes[row.symbol]) {
+          S.posicoes[row.symbol] = {...S.posicoes[row.symbol], ...row}
+          renderPosicao()
+        }
       }
-      renderPosicao()
     }).subscribe()
 
   sb.channel('rt-analises')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'analises'},p=>renderAnalise(p.new))
     .subscribe()
 
+  // Performance do dia — atualiza em tempo real após cada trade
+  sb.channel('rt-perf-dia')
+    .on('postgres_changes',{event:'*',schema:'public',table:'performance_dia'},p=>{
+      const row = p.new || {}
+      const hoje = new Date().toISOString().split('T')[0]
+      if (row.data === hoje) {
+        S.perfDia = {...(S.perfDia||{}), ...row}
+        renderPerf()
+      }
+    })
+    .subscribe()
+
   sb.channel('rt-ordens')
     .on('postgres_changes',{event:'*',schema:'public',table:'ordens'},p=>{
-      const o=p.new
-      if(o.status==='executada') { toast(`✅ ${o.tipo} ${o.symbol} @ ${o.preco_entrada}`,o.tipo==='COMPRA'?'c':'v'); carregarTudo() }
-      if(o.status==='fechada')   { toast(`🏁 Fechada: ${o.motivo_saida}`,'a'); carregarTudo() }
+      const o = p.new || {}
+      if (!o.status) return
+      if (o.status==='executada') {
+        // Ordem executada — recarrega posições e performance
+        toast(`✅ ORDEM EXECUTADA: ${o.tipo} ${o.symbol} @ ${parseFloat(o.preco_entrada||0).toFixed(0)}`, o.tipo==='COMPRA'?'c':'v')
+        _recarregarPosicaoPerf()
+      }
+      if (o.status==='fechada') {
+        // Ordem fechada — recarrega trades e performance
+        const motivo = o.motivo_saida || 'fechada'
+        toast(`🏁 POSIÇÃO FECHADA: ${motivo.toUpperCase()}`, 'a')
+        _recarregarPosicaoPerf()
+      }
     }).subscribe()
 
   sb.channel('rt-alertas')
@@ -2373,10 +2772,7 @@ function iniciarRealtime() {
       toast(p.new.mensagem,'a')
     }).subscribe()
 
-  sb.channel('rt-perf')
-    .on('postgres_changes',{event:'*',schema:'public',table:'performance_dia'},p=>{
-      S.perfDia=p.new; renderPerf()
-    }).subscribe()
+  // rt-perf removido — rt-perf-dia já escuta performance_dia com filtro de data
 
   // Realtime: configuracoes (IA auto calibração)
   sb.channel('rt-config')
@@ -2386,9 +2782,12 @@ function iniciarRealtime() {
         atualizarUiIaAuto(valor==='true')
       }
       if (chave==='ia_auto_ultima_revisao') {
-        setText('ia-auto-ts', new Date(valor).toLocaleString('pt-BR'))
+        // Busca o label legível junto
         carregarIaAutoStatus()
         toast('🤖 IA calibrou os limites automaticamente!','a')
+      }
+      if (chave==='ia_auto_ultima_label') {
+        setText('ia-auto-ts', valor)
       }
       // Atualiza input se IA mudou algum limite
       if (chave==='confianca_minima') document.getElementById('lim-conf-input').value = valor
@@ -2407,7 +2806,7 @@ function iniciarRealtime() {
 // ══════════════════════════════════════════
 async function polling() {
   const hoje = new Date().toISOString().split('T')[0]
-  const {data:trs}  = await sb.from('trades').select('*').gte('ts_entrada',hoje).order('ts_entrada',{ascending:false})
+  const {data:trs}  = await sb.from('trades').select('*').gte('ts_entrada',hoje+'T00:00:00').order('ts_entrada',{ascending:false})
   if (trs) { S.trades=trs; renderHistorico() }
   const {data:diar} = await sb.from('diarios').select('*').eq('data',hoje).maybeSingle()
   if (diar && diar.ts_gerado!==S.diario?.ts_gerado) { S.diario=diar; renderDiario() }
