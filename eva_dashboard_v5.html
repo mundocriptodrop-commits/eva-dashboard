@@ -1525,11 +1525,18 @@ function renderTick(t) {
   const pre = isW ? 'win' : 'wdo'
   const ant = S.ticks[t.symbol] || t
   S.ticks[t.symbol] = t
-  if (!S.ticksRef[t.symbol]) S.ticksRef[t.symbol] = parseFloat(t.ultimo||t.bid)
 
-  const ult = parseFloat(t.ultimo||t.bid)
+  // Referência para variação % — usa abertura_dia do D1 se disponível
+  // Atualiza sempre que chega abertura_dia nova (mais precisa que o primeiro tick)
+  if (t.abertura_dia && parseFloat(t.abertura_dia) > 0) {
+    S.ticksRef[t.symbol] = parseFloat(t.abertura_dia)
+  } else if (!S.ticksRef[t.symbol]) {
+    S.ticksRef[t.symbol] = parseFloat(t.ultimo||t.bid)
+  }
+
+  const ult  = parseFloat(t.ultimo||t.bid)
   const antU = parseFloat(ant.ultimo||ant.bid)
-  const el = document.getElementById(`${pre}-p`)
+  const el   = document.getElementById(`${pre}-p`)
   el.textContent = isW ? ult.toFixed(0) : ult.toFixed(2)
   el.className = `pb-preco ${ult>antU?'up':ult<antU?'dn':'neu'}`
   el.classList.add('tick-flash')
@@ -1539,7 +1546,8 @@ function renderTick(t) {
   setText(`${pre}-ask`, parseFloat(t.ask).toFixed(isW?0:2))
   setText(`${pre}-spr`, (t.ask-t.bid).toFixed(isW?0:2))
 
-  const vPct = ((ult-S.ticksRef[t.symbol])/S.ticksRef[t.symbol]*100)
+  const ref  = S.ticksRef[t.symbol] || ult
+  const vPct = ref > 0 ? ((ult - ref) / ref * 100) : 0
   const vEl  = document.getElementById(`${pre}-var`)
   vEl.textContent = `${vPct>=0?'+':''}${vPct.toFixed(2)}%`
   vEl.className   = `pb-var ${vPct>=0?'up':'dn'}`
