@@ -902,6 +902,7 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
               </div>
             </div>
 
+            <div id="aw-ts" style="font-size:10px;color:var(--text3);text-align:right;margin-bottom:4px;">—</div>
             <!-- Aguardando estado (some após 1ª análise) -->
             <div id="aw-aguardando" style="
               text-align:center;padding:32px 20px;
@@ -973,6 +974,7 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
                 <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--cyan)" id="ad-perfil">—</div>
               </div>
             </div>
+            <div id="ad-ts" style="font-size:10px;color:var(--text3);text-align:right;margin-bottom:4px;">—</div>
             <!-- Aguardando WDO -->
             <div id="ad-aguardando" style="
               text-align:center;padding:32px 20px;
@@ -1557,6 +1559,12 @@ function renderAnalise(a) {
   const pre = isW ? 'aw' : 'ad'
   S.analises[a.symbol] = a
 
+  // Esconde "EM ESPERA" e mostra detalhes na 1ª análise
+  const aguardEl = document.getElementById(`${pre}-aguardando`)
+  const detEl    = document.getElementById(`${pre}-detalhes`)
+  if (aguardEl) aguardEl.style.display = 'none'
+  if (detEl)    detEl.style.display    = 'block'
+
   const sinal = a.sinal_final || 'AGUARDAR'
   const conf  = a.confianca_final || 0
 
@@ -1649,7 +1657,7 @@ function renderAnalise(a) {
   const tsAnal   = new Date(a.ts)
   const minAtras = Math.round((Date.now() - tsAnal) / 60000)
   const tsLabel  = tsAnal.toLocaleTimeString('pt-BR',{hour12:false})
-  const tsEl     = document.getElementById('anal-ts')
+  const tsEl     = document.getElementById(`${pre}-ts`) || document.getElementById('anal-ts')
   if (minAtras > 5) {
     tsEl.textContent = `${tsLabel} (${minAtras} min atrás)`
     tsEl.style.color = minAtras > 15 ? 'var(--red)' : 'var(--yellow)'
@@ -1699,6 +1707,7 @@ function renderPosicao() {
       </div>
       <div class="pos-rows">
         <div class="pos-row-item"><div class="pri-lbl">ENTRADA</div><div class="pri-val en">${ent.toFixed(0)}</div></div>
+        <div class="pos-row-item"><div class="pri-lbl">PREÇO ATUAL</div><div class="pri-val ${pnl>=0?'pos':'neg'}">${parseFloat(pos.preco_atual||ent).toFixed(0)}</div></div>
         <div class="pos-row-item"><div class="pri-lbl">STOP LOSS</div><div class="pri-val sl">${parseFloat(pos.sl||0).toFixed(0)}</div></div>
         <div class="pos-row-item"><div class="pri-lbl">TAKE PROFIT</div><div class="pri-val tp">${tp.toFixed(0)}</div></div>
       </div>
@@ -2275,8 +2284,12 @@ function iniciarRealtime() {
 
   sb.channel('rt-posicoes')
     .on('postgres_changes',{event:'*',schema:'public',table:'posicoes_abertas'},p=>{
-      if(p.new.status==='aberta') S.posicoes[p.new.symbol]=p.new
-      else delete S.posicoes[p.new.symbol]
+      const row = p.new || p.old || {}
+      if (row.status === 'aberta') {
+        S.posicoes[row.symbol] = row
+      } else if (row.symbol) {
+        delete S.posicoes[row.symbol]
+      }
       renderPosicao()
     }).subscribe()
 
