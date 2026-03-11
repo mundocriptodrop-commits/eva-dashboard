@@ -1619,11 +1619,25 @@ function renderAnalise(a) {
 
   // Status bar modelo
   document.getElementById('sb-modelo').textContent = a.scout_modelo||a.decisor_modelo||'—'
-  document.getElementById('anal-ts').textContent   = new Date(a.ts).toLocaleTimeString('pt-BR',{hour12:false})
 
-  // Toast sinal
+  // Timestamp com indicação de idade
+  const tsAnal   = new Date(a.ts)
+  const minAtras = Math.round((Date.now() - tsAnal) / 60000)
+  const tsLabel  = tsAnal.toLocaleTimeString('pt-BR',{hour12:false})
+  const tsEl     = document.getElementById('anal-ts')
+  if (minAtras > 5) {
+    tsEl.textContent = `${tsLabel} (${minAtras} min atrás)`
+    tsEl.style.color = minAtras > 15 ? 'var(--red)' : 'var(--yellow)'
+    tsEl.title = 'Análise antiga — robô pode estar offline'
+  } else {
+    tsEl.textContent = tsLabel
+    tsEl.style.color = ''
+    tsEl.title = ''
+  }
+
+  // Toast sinal — só dispara se análise for dos últimos 5 min
   const lastSinal = S._lastSinal?.[a.symbol]
-  if ((sinal==='COMPRA'||sinal==='VENDA') && lastSinal!==sinal) {
+  if ((sinal==='COMPRA'||sinal==='VENDA') && lastSinal!==sinal && minAtras <= 5) {
     if (!S._lastSinal) S._lastSinal={}
     S._lastSinal[a.symbol] = sinal
     toast(`${sinal} ${a.symbol} — ${conf}% | ${a.setup_final||''}`, sinal==='COMPRA'?'c':'v')
@@ -2055,7 +2069,9 @@ async function carregarIaAutoStatus() {
 
 async function salvarConfig() {
   const st = document.getElementById('cfg-status')
-  st.textContent = 'Salvando...'
+  st.textContent = '⏳ Salvando...'
+  st.style.color = 'var(--yellow)'
+
   const campos = [
     ['api_key_openai',   document.getElementById('cfg-key-openai').value],
     ['api_key_anthropic',document.getElementById('cfg-key-anthropic').value],
@@ -2066,21 +2082,27 @@ async function salvarConfig() {
     ['scout_modelo',     document.querySelector('#modelos-grid .model-card.sel')?.dataset.m||''],
     ['decisor_modelo',   document.querySelector('#decisor-grid .model-card.sel')?.dataset.m||'gpt-4o'],
     ['modo_ia',          document.querySelector('.modo-card.sel')?.id.replace('mc-','')||'simples'],
-  ]
-  let ok = true
-  for (const [chave, valor] of campos) {
-    if (!valor) continue
-    const r = await sbWrite('configuracoes', {chave, valor})
-    if (!r) { ok=false; break }
-  }
-  // Limites display
-  document.getElementById('lim-perda').textContent  = `R$ ${document.getElementById('cfg-perda').value}`
-  document.getElementById('lim-lotes').textContent  = document.getElementById('cfg-lmax').value
-  document.getElementById('lim-horario').textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+  ].filter(([_, v]) => v)  // ignora campos vazios
 
-  st.style.color = ok?'var(--green)':'var(--red)'
-  st.textContent  = ok?'✅ Configuração salva no Supabase!':'❌ Erro ao salvar'
-  if (ok) toast('Configuração salva com sucesso!','a')
+  try {
+    // Salva tudo em paralelo — muito mais rápido
+    const results = await Promise.all(
+      campos.map(([chave, valor]) => sbWrite('configuracoes', {chave, valor}))
+    )
+    const ok = results.every(r => r)
+
+    // Atualiza display de limites
+    document.getElementById('lim-perda').textContent   = `R$ ${document.getElementById('cfg-perda').value}`
+    document.getElementById('lim-lotes').textContent   = document.getElementById('cfg-lmax').value
+    document.getElementById('lim-horario').textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+
+    st.style.color = ok ? 'var(--green)' : 'var(--red)'
+    st.textContent  = ok ? '✅ Configuração salva! Robô aplica em até 30s.' : '❌ Erro ao salvar — verifique conexão'
+    if (ok) toast('✅ Config salva — robô atualiza em 30s', 'a')
+  } catch(e) {
+    st.style.color = 'var(--red)'
+    st.textContent = `❌ Erro: ${e.message}`
+  }
 }
 
 async function testarConexao() {
@@ -2152,8 +2174,9 @@ async function carregarTudo() {
   const {data:tks} = await sb.from('ticks').select('*').order('ts',{ascending:false}).limit(4)
   tks?.forEach(t=>renderTick(t))
 
-  // Análises
-  const {data:anals} = await sb.from('analises').select('*').order('ts',{ascending:false}).limit(4)
+  // Análises — só exibe se for recente (últimos 30 min); se velha mostra EM ESPERA
+  const tsLimite = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  const {data:anals} = await sb.from('analises').select('*').gte('ts', tsLimite).order('ts',{ascending:false}).limit(4)
   const visto=new Set()
   anals?.forEach(a=>{ if(!visto.has(a.symbol)){visto.add(a.symbol);renderAnalise(a)} })
 
