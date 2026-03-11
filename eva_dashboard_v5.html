@@ -1296,11 +1296,13 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
           <span style="color:var(--yellow)">Você define apenas o freio absoluto: perda máxima/dia.</span>
         </div>
         <!-- Última decisão da IA -->
-        <div id="ia-auto-ultima" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;">
+        <div id="ia-auto-ultima" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;margin-bottom:10px;">
           <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--purple);margin-bottom:5px;">ÚLTIMA CALIBRAÇÃO DA IA</div>
           <div id="ia-auto-ts" style="font-size:10px;color:var(--text3);margin-bottom:4px;">—</div>
           <div id="ia-auto-motivo" style="font-size:11px;color:var(--text2);line-height:1.5;">—</div>
         </div>
+        <!-- Botão salvar toggle IA -->
+        <button class="btn btn-primary" style="width:100%;margin-top:4px;" onclick="salvarIaAuto()">💾 SALVAR CONFIGURAÇÃO DE IA</button>
       </div>
 
       <!-- LIMITES DE SEGURANÇA configuráveis -->
@@ -1383,7 +1385,7 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
 
         <!-- Botão salvar limites -->
         <div style="margin-top:12px;">
-          <button class="btn btn-danger" style="width:100%" onclick="salvarLimites()">💾 SALVAR LIMITES</button>
+          <button class="btn btn-danger" style="width:100%" id="btn-salvar-limites" onclick="salvarLimitesBtn()">💾 SALVAR LIMITES</button>
         </div>
       </div>
 
@@ -1634,7 +1636,14 @@ function renderAnalise(a) {
   setText(`${pre}-resumo`, a.resumo_ia||a.scout_motivo||'Aguardando...')
 
   // Status bar modelo
-  setText('sb-modelo', a.scout_modelo||a.decisor_modelo||'—')
+  // Modo dupla: mostra "DUPLA IA", simples: só o scout
+  if (a.decisor_modelo && a.scout_modelo && a.scout_modelo !== a.decisor_modelo) {
+    const el = document.getElementById('sb-modelo')
+    el.textContent = 'DUPLA IA'
+    el.title = `Scout: ${a.scout_modelo} → Decisor: ${a.decisor_modelo}`
+  } else {
+    setText('sb-modelo', a.scout_modelo || a.decisor_modelo || '—')
+  }
 
   // Timestamp com indicação de idade
   const tsAnal   = new Date(a.ts)
@@ -2709,6 +2718,27 @@ async function fazerLogin() {
 
   // Sucesso — esconde login
   entrarNoDashboard(data.user)
+}
+
+async function salvarLimitesBtn() {
+  const btn = document.getElementById('btn-salvar-limites')
+  btn.disabled = true
+  btn.textContent = '⏳ SALVANDO...'
+  await salvarLimites()
+  btn.disabled = false
+  btn.textContent = '💾 SALVAR LIMITES'
+}
+
+async function salvarIaAuto() {
+  const iaAuto = document.getElementById('tog-ia-auto').classList.contains('on')
+  const results = await Promise.all([
+    sbWrite('configuracoes', {chave:'ia_auto_limites', valor: iaAuto.toString()}),
+  ])
+  if (results.every(r=>r)) {
+    toast(iaAuto ? '🤖 IA vai calibrar os limites automaticamente!' : '🔒 Controle manual de limites ativado!', 'a')
+  } else {
+    toast('❌ Erro ao salvar configuração de IA', 'a')
+  }
 }
 
 async function toggleRoboSupabase() {
