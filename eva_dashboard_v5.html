@@ -1617,18 +1617,32 @@ function renderAnalise(a) {
   setInd('ifr',  a.ifr_status)
   setInd('macd', a.macd_status)
   setInd('vol',  a.volume_status)
-  setInd('vwap', a.vwap_posicao)
-  setInd('book', a.book_pressao)
+  // vwap e book renderizados abaixo com cor correta
   const adxEl = document.getElementById(`${pre}-adx`)
-  adxEl.textContent = a.adx_valor ? parseFloat(a.adx_valor).toFixed(1) : '—'
-  adxEl.className = `ind-val ${parseFloat(a.adx_valor||0)>30?'pos':parseFloat(a.adx_valor||0)<20?'neg':'neu'}`
+  const adxNum = parseFloat(a.adx_valor ?? 0)
+  adxEl.textContent = (a.adx_valor != null && a.adx_valor !== '') ? adxNum.toFixed(1) : '—'
+  adxEl.className = `ind-val ${adxNum>30?'pos':adxNum>20?'neu':'neg'}`
+  // Sub-label tendência ADX
+  const adxSub = document.getElementById(`${pre}-adx-sub`)
+  if (adxSub) adxSub.textContent = adxNum>30 ? 'FORTE▲' : adxNum>20 ? 'MODERADO' : 'FRACO'
 
-  // Entrada sugerida
-  if (sinal !== 'AGUARDAR') {
-    setText(`${pre}-entrada`, a.entrada_sugerida ? parseFloat(a.entrada_sugerida).toFixed(0) : '—')
-    setText(`${pre}-sl`, a.sl_sugerido ? parseFloat(a.sl_sugerido).toFixed(0) : '—')
-    setText(`${pre}-tp`, a.tp_sugerido ? parseFloat(a.tp_sugerido).toFixed(0) : '—')
+  // VWAP colorido
+  const vwapEl = document.getElementById(`${pre}-vwap`)
+  if (vwapEl) {
+    vwapEl.textContent = a.vwap_posicao || '—'
+    vwapEl.className = `ind-val ${a.vwap_posicao==='ACIMA'?'pos':a.vwap_posicao==='ABAIXO'?'neg':'NEUTRO'}`
   }
+  // BOOK colorido
+  const bookEl = document.getElementById(`${pre}-book`)
+  if (bookEl) {
+    bookEl.textContent = a.book_pressao || '—'
+    bookEl.className = `ind-val ${a.book_pressao==='COMPRA'?'pos':a.book_pressao==='VENDA'?'neg':'NEUTRO'}`
+  }
+
+  // Entrada/SL/TP — mostra sempre (com opacidade reduzida no AGUARDAR via CSS)
+  setText(`${pre}-entrada`, a.entrada_sugerida && parseFloat(a.entrada_sugerida)>0 ? parseFloat(a.entrada_sugerida).toFixed(0) : '—')
+  setText(`${pre}-sl`, a.sl_sugerido && parseFloat(a.sl_sugerido)>0 ? parseFloat(a.sl_sugerido).toFixed(0) : '—')
+  setText(`${pre}-tp`, a.tp_sugerido && parseFloat(a.tp_sugerido)>0 ? parseFloat(a.tp_sugerido).toFixed(0) : '—')
 
   // Suportes / Resistências
   const renderSR = (id, arr) => {
@@ -2214,9 +2228,15 @@ async function carregarConfig() {
 async function carregarTudo() {
   const hoje = new Date().toISOString().split('T')[0]
 
-  // Ticks
-  const {data:tks} = await sb.from('ticks').select('*').order('ts',{ascending:false}).limit(4)
-  tks?.forEach(t=>renderTick(t))
+  // Ticks — carrega ticks_live primeiro (mais rápido, 1 row por símbolo)
+  const {data:tksLive} = await sb.from('ticks_live').select('*')
+  if (tksLive?.length) {
+    tksLive.forEach(t=>renderTick(t))
+  } else {
+    // Fallback: tabela histórica
+    const {data:tks} = await sb.from('ticks').select('*').order('id',{ascending:false}).limit(4)
+    tks?.forEach(t=>renderTick(t))
+  }
 
   // Análises — só exibe se for recente (últimos 30 min); se velha mostra EM ESPERA
   const tsLimite = new Date(Date.now() - 30 * 60 * 1000).toISOString()
@@ -2278,9 +2298,44 @@ function iniciarRealtime() {
   const pw = document.getElementById('pw')
   const wl = document.getElementById('wslbl')
 
-  sb.channel('rt-ticks')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ticks'},p=>renderTick(p.new))
+  // ticks_live: UPDATE em tempo real (1 linha por símbolo — Realtime instantâneo)
+  sb.channel('rt-ticks-live')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ticks_live'},p=>{
+      if(!S._lastTickTs) S._lastTickTs={}
+      S._lastTickTs[p.new.symbol] = Date.now()
+      renderTick(p.new)
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ticks_live'},p=>{
+      if(!S._lastTickTs) S._lastTickTs={}
+      S._lastTickTs[p.new.symbol] = Date.now()
+      renderTick(p.new)
+    })
     .subscribe(st=>{ if(st==='SUBSCRIBED'){pw.className='pulse ok';wl.textContent='REALTIME';wl.style.color='var(--green)'} })
+
+  // Fallback: INSERT histórico (menos frequente, mas garante compatibilidade)
+  sb.channel('rt-ticks')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ticks'},p=>{
+      if(!S._lastTickTs) S._lastTickTs={}
+      // Só usa se ticks_live não atualizou recentemente
+      const ultimo = S._lastTickTs[p.new.symbol] || 0
+      if (Date.now() - ultimo > 2000) { S._lastTickTs[p.new.symbol]=Date.now(); renderTick(p.new) }
+    })
+    .subscribe()
+
+  // Watchdog final: poll em ticks_live se nenhum canal atualizou em >3s
+  if(!S._lastTickTs) S._lastTickTs={}
+  setInterval(async ()=>{
+    const agora = Date.now()
+    for (const pre of ['WIN','WDO']) {
+      const sym = Object.keys(S.ticks).find(k=>k.startsWith(pre)) || (pre==='WIN'?'WINJ26':'WDOJ26')
+      if (agora - (S._lastTickTs[sym]||0) > 3000) {
+        try {
+          const {data} = await sb.from('ticks_live').select('*').eq('symbol',sym).maybeSingle()
+          if (data) { S._lastTickTs[sym]=Date.now(); renderTick(data) }
+        } catch(e){}
+      }
+    }
+  }, 1500)
 
   sb.channel('rt-posicoes')
     .on('postgres_changes',{event:'*',schema:'public',table:'posicoes_abertas'},p=>{
