@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EVA Trade v5</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;500;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#090c0f;--bg2:#0e1318;--bg3:#141b22;--bg4:#0b1015;
+  --border:#1e2d3a;--border2:#2a3f52;
+  --text:#c8d8e8;--text2:#6a8a9f;--text3:#3a5a6f;
+  --green:#00e5a0;--green2:#00b87a;
+  --red:#ff3d5a;--red2:#cc1f3a;
+  --yellow:#ffd84d;--blue:#3db8ff;--purple:#a855f7;
+  --cyan:#00d4ff;--orange:#ff8c42;
+  --glow-g:0 0 20px rgba(0,229,160,.25);
+  --glow-r:0 0 20px rgba(255,61,90,.25);
+  --mono:'Space Mono',monospace;
+  --cond:'Barlow Condensed',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);
+  position:sticky;top:0;z-index:200;}
+.logo{font-family:var(--cond);font-size:22px;font-weight:900;letter-spacing:3px;color:var(--cyan);}
+.logo span{color:var(--text2);font-weight:300;}
+.hd-right{display:flex;gap:16px;align-items:center;}
+.hd-stat{display:flex;align-items:center;gap:5px;font-family:var(--cond);font-size:11px;letter-spacing:1px;color:var(--text2);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s;}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green);}
+.dot.off{background:var(--red);}
+.clock{font-size:14px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;letter-spacing:2px;}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--text3);}
+.pulse.ok{background:var(--green);animation:pulsar 2s infinite;}
+@keyframes pulsar{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.4)}50%{box-shadow:0 0 0 6px rgba(0,229,160,0)}}
+
+/* STATUS BAR */
+.statusbar{background:var(--bg4);border-bottom:1px solid var(--border);padding:7px 20px;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+.sbar-item{display:flex;gap:8px;align-items:center;font-family:var(--cond);font-size:12px;}
+.sbar-label{color:var(--text3);letter-spacing:1px;}
+.sbar-val{font-weight:700;}
+.sbar-val.pos{color:var(--green);}
+.sbar-val.neg{color:var(--red);}
+.sbar-val.neu{color:var(--text);}
+.robo-badge{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;
+  padding:3px 10px;border-radius:2px;}
+.robo-badge.on{background:rgba(0,229,160,.15);color:var(--green);border:1px solid rgba(0,229,160,.3);}
+.robo-badge.off{background:rgba(255,61,90,.1);color:var(--red);border:1px solid rgba(255,61,90,.2);}
+
+/* NAV TABS */
+nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);overflow-x:auto;}
+.ntab{padding:11px 20px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;
+  cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;
+  white-space:nowrap;transition:all .2s;}
+.ntab:hover{color:var(--text2);}
+.ntab.ativo{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+/* PAGES */
+.page{display:none;padding:14px;}
+.page.ativo{display:block;}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:12px;}
+.card::before{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--border2),transparent);}
+.ch{display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);}
+.ct{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text2);}
+.cb{padding:14px;}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.gcol{display:grid;grid-template-columns:1fr 340px;gap:12px;}
+
+/* ═══════════ ANÁLISE ═══════════ */
+/* Preço */
+.preco-bloco{background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+  padding:16px;position:relative;overflow:hidden;}
+.preco-bloco.win{border-left:3px solid var(--cyan);}
+.preco-bloco.wdo{border-left:3px solid var(--yellow);}
+.pb-nome{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--text2);margin-bottom:5px;}
+.pb-preco{font-family:var(--cond);font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;transition:color .2s;}
+.pb-preco.up{color:var(--green);text-shadow:var(--glow-g);}
+.pb-preco.dn{color:var(--red);text-shadow:var(--glow-r);}
+.pb-preco.neu{color:var(--text);}
+.pb-sub{display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--text2);}
+.pb-sub span{color:var(--text3);}
+.pb-var{position:absolute;top:14px;right:14px;font-family:var(--cond);font-size:14px;font-weight:700;}
+.pb-var.up{color:var(--green);}
+.pb-var.dn{color:var(--red);}
+.tick-flash{animation:tflash .35s ease;}
+@keyframes tflash{0%{opacity:.2}100%{opacity:1}}
+
+/* Abas símbolo */
+.sym-tabs{display:flex;gap:0;margin-bottom:12px;}
+.sym-tab{padding:7px 18px;font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;
+  cursor:pointer;border:1px solid var(--border);color:var(--text3);background:var(--bg3);transition:all .2s;}
+.sym-tab:first-child{border-radius:3px 0 0 3px;}
+.sym-tab:last-child{border-radius:0 3px 3px 0;border-left:none;}
+.sym-tab.ativo{color:var(--cyan);border-color:var(--cyan);background:rgba(0,212,255,.08);}
+
+/* Sinal */
+.sinal-grande{display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--cond);font-size:28px;font-weight:900;letter-spacing:2px;
+  padding:10px 20px;border-radius:4px;margin-bottom:10px;}
+.sinal-grande.COMPRA{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25);}
+.sinal-grande.VENDA{background:rgba(255,61,90,.12);color:var(--red);border:1px solid rgba(255,61,90,.25);}
+.sinal-grande.AGUARDAR{background:rgba(106,138,159,.08);color:var(--text2);border:1px solid var(--border);}
+.conf-wrap{margin:8px 0;}
+.conf-lbl{font-size:10px;color:var(--text3);letter-spacing:1px;margin-bottom:3px;}
+.conf-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;width:100%;}
+.conf-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.conf-fill.alta{background:linear-gradient(90deg,var(--green2),var(--green));}
+.conf-fill.media{background:var(--yellow);}
+.conf-fill.baixa{background:var(--red);}
+
+/* Indicadores grid */
+.ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.ind-item{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;}
+.ind-lbl{font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--text3);margin-bottom:5px;}
+.ind-val{font-family:var(--cond);font-size:16px;font-weight:700;}
+.ind-val.pos,.ind-val.ALTA,.ind-val.POSITIVO,.ind-val.ACIMA,.ind-val.COMPRA{color:var(--green);}
+.ind-val.neg,.ind-val.BAIXA,.ind-val.NEGATIVO,.ind-val.ABAIXO,.ind-val.VENDA{color:var(--red);}
+.ind-val.NEUTRO,.ind-val.LATERAL,.ind-val.neu{color:var(--text2);}
+.ind-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* TF badges */
+.tf-row{display:flex;gap:6px;margin:8px 0;}
+.tf-badge{font-family:var(--cond);font-size:10px;font-weight:700;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.tf-badge.ALTA{background:rgba(0,229,160,.12);color:var(--green);}
+.tf-badge.BAIXA{background:rgba(255,61,90,.12);color:var(--red);}
+.tf-badge.LATERAL,.tf-badge.NEUTRO,.tf-badge.neu{background:rgba(106,138,159,.1);color:var(--text2);}
+.alinhado{background:rgba(0,229,160,.1);color:var(--green);border:1px solid rgba(0,229,160,.2);
+  font-family:var(--cond);font-size:10px;font-weight:700;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.divergente{background:rgba(255,61,90,.1);color:var(--red);border:1px solid rgba(255,61,90,.2);
+  font-family:var(--cond);font-size:10px;font-weight:700;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.modo-tag{font-family:var(--cond);font-size:10px;font-weight:700;padding:3px 10px;border-radius:2px;letter-spacing:1px;}
+.modo-tag.busca{background:rgba(61,184,255,.1);color:var(--blue);}
+.modo-tag.monit{background:rgba(168,85,247,.1);color:var(--purple);}
+
+/* Suportes / Resistências */
+.sr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sr-bloco{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;}
+.sr-titulo{font-family:var(--cond);font-size:10px;font-weight:700;letter-spacing:2px;margin-bottom:8px;}
+.sr-titulo.r{color:var(--red);}
+.sr-titulo.s{color:var(--green);}
+.sr-nivel{font-family:var(--cond);font-size:14px;font-weight:700;padding:3px 0;
+  border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+.sr-nivel:last-child{border:none;}
+
+/* Posição lateral */
+.pos-lateral{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px;}
+.pos-vazia{padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:12px;letter-spacing:1px;}
+.pos-tipo{font-family:var(--cond);font-size:24px;font-weight:900;letter-spacing:2px;}
+.pos-tipo.COMPRA{color:var(--green);}
+.pos-tipo.VENDA{color:var(--red);}
+.pnl-g{font-family:var(--cond);font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1;}
+.pnl-g.pos{color:var(--green);text-shadow:var(--glow-g);}
+.pnl-g.neg{color:var(--red);text-shadow:var(--glow-r);}
+.pnl-pts{font-family:var(--cond);font-size:16px;color:var(--text2);margin-top:3px;}
+.pos-rows{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;}
+.pos-row-item{background:var(--bg4);border:1px solid var(--border);padding:7px 9px;border-radius:3px;}
+.pri-lbl{font-family:var(--cond);font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:3px;}
+.pri-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.pri-val.sl{color:var(--red);}
+.pri-val.tp{color:var(--green);}
+.pri-val.en{color:var(--cyan);}
+.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:10px;}
+.prog-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--yellow),var(--green));transition:width .5s;}
+
+/* Resumo IA */
+.resumo-ia{background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+  padding:10px 12px;font-size:11px;line-height:1.6;color:var(--text2);margin-top:8px;}
+.scout-tag{font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;
+  color:var(--purple);margin-bottom:4px;}
+
+/* ═══════════ PERFORMANCE ═══════════ */
+.perf-num{font-family:var(--cond);font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;}
+.perf-num.pos{color:var(--green);}
+.perf-num.neg{color:var(--red);}
+.perf-num.neu{color:var(--text);}
+.perf-lbl{font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:5px;font-weight:700;}
+.perf-card{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:14px;text-align:center;}
+.trade-row{display:grid;grid-template-columns:55px 90px 1fr auto;gap:8px;align-items:center;
+  padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.trade-row:last-child{border:none;}
+.tr-hora{color:var(--text3);font-variant-numeric:tabular-nums;}
+.tr-tipo{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:1px;}
+.tr-tipo.COMPRA{color:var(--green);}
+.tr-tipo.VENDA{color:var(--red);}
+.tr-setup{color:var(--text2);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tr-res{font-family:var(--cond);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;text-align:right;}
+.tr-res.pos{color:var(--green);}
+.tr-res.neg{color:var(--red);}
+.mem-wr{font-family:var(--cond);font-size:13px;font-weight:700;}
+.mem-wr.bom{color:var(--green);}
+.mem-wr.medio{color:var(--yellow);}
+.mem-wr.ruim{color:var(--red);}
+.mem-bar{height:3px;background:var(--border);border-radius:1px;overflow:hidden;margin-top:2px;}
+.mem-fill{height:100%;border-radius:1px;}
+.mem-fill.bom{background:var(--green);}
+.mem-fill.medio{background:var(--yellow);}
+.mem-fill.ruim{background:var(--red);}
+
+/* ═══════════ CONFIGURAÇÕES ═══════════ */
+.cfg-section{background:var(--bg2);border:1px solid var(--border);border-radius:4px;
+  padding:18px;margin-bottom:14px;}
+.cfg-title{font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.cfg-title::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--cyan);}
+.cfg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.cfg-field{display:flex;flex-direction:column;gap:5px;}
+.cfg-lbl{font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--text3);font-weight:700;}
+.cfg-input{background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+  padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;width:100%;
+  outline:none;transition:border-color .2s;}
+.cfg-input:focus{border-color:var(--cyan);}
+.cfg-input::placeholder{color:var(--text3);}
+.eye-wrap{position:relative;}
+.eye-wrap .cfg-input{padding-right:36px;}
+.eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;}
+
+/* Modo cards */
+.modo-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.modo-card{background:var(--bg3);border:2px solid var(--border);border-radius:4px;
+  padding:14px;cursor:pointer;transition:all .2s;}
+.modo-card:hover{border-color:var(--border2);}
+.modo-card.sel{border-color:var(--cyan);background:rgba(0,212,255,.05);}
+.modo-card-nome{font-family:var(--cond);font-size:16px;font-weight:900;letter-spacing:1px;
+  color:var(--text);margin-bottom:5px;}
+.modo-card-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* Modelo cards */
+.modelos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.model-card{background:var(--bg3);border:2px solid var(--border);border-radius:3px;
+  padding:10px;cursor:pointer;transition:all .2s;position:relative;}
+.model-card:hover{border-color:var(--border2);}
+.model-card.sel{border-color:var(--cyan);}
+.model-nome{font-family:var(--cond);font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.model-info{font-size:10px;color:var(--text3);}
+.model-check{position:absolute;top:8px;right:8px;color:var(--green);font-size:12px;display:none;}
+.model-card.sel .model-check{display:block;}
+
+/* Botões */
+.btn{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:2px;
+  padding:11px 20px;border-radius:3px;cursor:pointer;border:none;transition:all .2s;}
+.btn-primary{background:rgba(0,212,255,.15);color:var(--cyan);border:1px solid rgba(0,212,255,.3);}
+.btn-primary:hover{background:rgba(0,212,255,.25);}
+.btn-success{background:rgba(0,229,160,.15);color:var(--green);border:1px solid rgba(0,229,160,.3);}
+.btn-success:hover{background:rgba(0,229,160,.25);}
+.btn-danger{background:rgba(255,61,90,.1);color:var(--red);border:1px solid rgba(255,61,90,.2);}
+.btn-danger:hover{background:rgba(255,61,90,.2);}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:10px;}
+.toggle{width:44px;height:24px;background:var(--border);border-radius:12px;
+  cursor:pointer;position:relative;transition:background .2s;}
+.toggle.on{background:var(--green2);}
+.toggle::after{content:'';position:absolute;width:18px;height:18px;background:white;
+  border-radius:50%;top:3px;left:3px;transition:left .2s;}
+.toggle.on::after{left:23px;}
+.toggle-lbl{font-family:var(--cond);font-size:12px;letter-spacing:1px;color:var(--text2);}
+
+/* Dias semana */
+.dias-row{display:flex;gap:6px;flex-wrap:wrap;}
+.dia-btn{padding:6px 10px;font-family:var(--cond);font-size:11px;font-weight:700;
+  border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--text3);
+  background:var(--bg3);transition:all .2s;letter-spacing:1px;}
+.dia-btn.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08);}
+
+/* Limites info */
+.limite-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.limite-row:last-child{border:none;}
+.limite-nome{color:var(--text2);font-family:var(--cond);letter-spacing:1px;font-size:11px;}
+.limite-val{font-weight:700;font-family:var(--cond);font-size:13px;}
+
+/* Custo */
+.custo-row{display:flex;justify-content:space-between;padding:6px 0;
+  border-bottom:1px solid var(--border);font-size:11px;}
+.custo-row:last-child{border:none;}
+.custo-model{color:var(--text2);}
+.custo-val{color:var(--red);font-weight:700;font-family:var(--cond);}
+
+/* ═══════════ DIÁRIO ═══════════ */
+.diario-txt{font-size:12px;line-height:1.8;color:var(--text2);padding:14px;}
+.diario-txt h2{font-family:var(--cond);font-size:12px;font-weight:700;letter-spacing:1px;
+  color:var(--yellow);margin:10px 0 4px;text-transform:uppercase;}
+.diario-txt strong{color:var(--text);}
+.diario-vazio{padding:30px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:12px;letter-spacing:1px;}
+
+/* ═══════════ MEMÓRIA ═══════════ */
+.aprend-tipo{font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:2px;}
+.aprend-tipo.licao{color:var(--cyan);}
+.aprend-tipo.erro_recorrente{color:var(--red);}
+.aprend-tipo.recomendacao{color:var(--green);}
+.aprend-tipo.setup_evitar{color:var(--orange);}
+
+/* IA AUTO LIMITES */
+.ia-auto-on .cfg-section#ia-auto-section{
+  border-color:rgba(168,85,247,.4);
+  background:rgba(168,85,247,.04);
+}
+.ia-auto-on #ia-auto-section .cfg-title{color:var(--purple);}
+.limites-disabled input{
+  opacity:.35;pointer-events:none;
+}
+.limites-disabled .limite-row{opacity:.35;}
+
+/* ALERTAS TOAST */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9998;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;
+  padding:10px 14px;min-width:270px;display:flex;gap:10px;align-items:center;
+  font-size:12px;box-shadow:0 4px 24px rgba(0,0,0,.6);animation:sin .3s ease;}
+.toast.c{border-left:3px solid var(--green);}
+.toast.v{border-left:3px solid var(--red);}
+.toast.a{border-left:3px solid var(--yellow);}
+@keyframes sin{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes sout{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}
+
+/* ═══════════════════════════════════════════
+   LOGIN SCREEN — SPLIT LAYOUT
+═══════════════════════════════════════════ */
+#login-screen{
+  position:fixed;inset:0;z-index:10000;
+  display:flex;flex-direction:row;
+  overflow:hidden;font-family:'Barlow Condensed',sans-serif;
+}
+#login-screen.saindo{animation:loginOut .6s cubic-bezier(.4,0,.2,1) forwards;}
+@keyframes loginOut{to{opacity:0;transform:scale(1.02);filter:blur(4px);}}
+
+/* ══ LADO DIREITO: galeria de imagens ══ */
+.lk-visual{
+  flex:1;position:relative;overflow:hidden;
+  background:#000;
+}
+
+/* Slideshow de imagens */
+.lk-slides{position:absolute;inset:0;}
+.lk-slide{
+  position:absolute;inset:0;opacity:0;
+  transition:opacity 1.2s ease;
+  background-size:cover;background-position:center;
+}
+.lk-slide.ativo{opacity:1;}
+.lk-slide::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(
+    135deg,
+    rgba(0,0,0,.55) 0%,
+    rgba(0,0,0,.2) 50%,
+    rgba(0,0,0,.65) 100%
+  );
+}
+
+/* Overlay de grid sobre as imagens */
+.lk-vis-grid{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* Borda divisória luminosa */
+.lk-divider{
+  position:absolute;left:0;top:0;bottom:0;width:1px;z-index:10;
+  background:linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0,212,255,.6) 20%,
+    rgba(0,212,255,1) 50%,
+    rgba(0,212,255,.6) 80%,
+    transparent 100%
+  );
+  box-shadow:0 0 20px rgba(0,212,255,.4), 0 0 60px rgba(0,212,255,.1);
+}
+
+/* Conteúdo sobre as imagens */
+.lk-vis-content{
+  position:absolute;inset:0;z-index:5;
+  display:flex;flex-direction:column;
+  justify-content:flex-end;padding:48px;
+}
+
+/* Tags flutuantes */
+.lk-tags{
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;
+  animation:tagsIn .8s .3s both;
+}
+@keyframes tagsIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.lk-tag{
+  padding:4px 12px;border-radius:2px;
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  backdrop-filter:blur(8px);
+}
+.lk-tag.g{background:rgba(0,229,160,.15);border:1px solid rgba(0,229,160,.4);color:#00e5a0;}
+.lk-tag.c{background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.4);color:#00d4ff;}
+.lk-tag.y{background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);color:#f5a623;}
+
+.lk-vis-title{
+  font-family:'Orbitron',monospace;
+  font-size:38px;font-weight:900;line-height:1.1;
+  color:#fff;letter-spacing:2px;margin-bottom:12px;
+  text-shadow:0 2px 20px rgba(0,0,0,.8);
+  animation:visTitle .9s .1s both;
+}
+@keyframes visTitle{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.lk-vis-title span{color:var(--cyan);}
+
+.lk-vis-desc{
+  font-size:14px;font-weight:400;letter-spacing:.5px;
+  color:rgba(255,255,255,.6);line-height:1.6;max-width:420px;
+  animation:visDesc .9s .25s both;
+}
+@keyframes visDesc{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Indicadores de slide */
+.lk-dots{
+  position:absolute;bottom:32px;left:48px;z-index:5;
+  display:flex;gap:8px;
+}
+.lk-dot-item{
+  width:24px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.25);cursor:pointer;
+  transition:all .3s;
+}
+.lk-dot-item.ativo{background:var(--cyan);width:40px;}
+
+/* Caption de cada slide */
+.lk-caption{
+  position:absolute;top:32px;right:32px;z-index:5;
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  color:rgba(255,255,255,.35);text-align:right;
+}
+
+/* ══ LADO ESQUERDO: login ══ */
+.lk-login-side{
+  width:460px;flex-shrink:0;position:relative;
+  background:linear-gradient(160deg,#07090e 0%,#0a0f18 60%,#060810 100%);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:40px 48px;overflow:hidden;
+}
+
+/* Orbs de fundo */
+.login-orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+.login-orb.a{
+  width:350px;height:350px;top:-120px;left:-80px;
+  background:radial-gradient(circle,rgba(0,212,255,.12) 0%,transparent 70%);
+  animation:orbFloat 9s ease-in-out infinite;
+}
+.login-orb.b{
+  width:280px;height:280px;bottom:-80px;right:-60px;
+  background:radial-gradient(circle,rgba(168,85,247,.1) 0%,transparent 70%);
+  animation:orbFloat 13s ease-in-out infinite reverse;
+}
+@keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(15px,-20px)}}
+
+/* Grid sutil no fundo do login */
+.login-grid{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:36px 36px;
+}
+
+/* Marca d'água do símbolo */
+.lk-watermark{
+  position:absolute;bottom:-40px;right:-20px;
+  font-family:'Orbitron',monospace;font-size:160px;font-weight:900;
+  color:rgba(0,212,255,.03);letter-spacing:-10px;pointer-events:none;
+  user-select:none;line-height:1;
+}
+
+/* Card de login */
+.login-card{
+  position:relative;z-index:2;width:100%;
+  animation:cardIn .7s cubic-bezier(.16,1,.3,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* Logo */
+.login-logo{
+  font-family:'Orbitron',monospace;
+  font-size:40px;font-weight:900;letter-spacing:8px;
+  color:#fff;text-align:center;margin-bottom:2px;
+  position:relative;
+}
+.login-logo::after{
+  content:'';display:block;width:40px;height:3px;margin:8px auto 0;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;
+}
+.login-logo .logo-dot{color:var(--cyan);}
+
+.login-sub{
+  font-size:10px;font-weight:700;letter-spacing:4px;
+  color:rgba(255,255,255,.25);text-align:center;
+  margin-bottom:36px;margin-top:14px;
+  text-transform:uppercase;
+}
+
+/* Scanner animado */
+.login-scanner{
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,.3),rgba(0,212,255,.8),rgba(0,212,255,.3),transparent);
+  margin-bottom:32px;position:relative;overflow:hidden;
+}
+.login-scanner::after{
+  content:'';position:absolute;top:-1px;left:-40%;width:40%;height:3px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,1),transparent);
+  animation:scan 2.8s ease-in-out infinite;filter:blur(1px);
+}
+@keyframes scan{from{left:-40%}to{left:140%}}
+
+/* Tabs */
+.login-tabs{
+  display:flex;margin-bottom:28px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.login-tab{
+  flex:1;padding:10px;text-align:center;cursor:pointer;
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  color:rgba(255,255,255,.25);border-bottom:2px solid transparent;
+  transition:all .2s;margin-bottom:-1px;
+}
+.login-tab.ativo{color:var(--cyan);border-bottom-color:var(--cyan);}
+.login-tab:hover:not(.ativo){color:rgba(255,255,255,.5);}
+
+/* Campos */
+.login-field{margin-bottom:16px;}
+.login-lbl{
+  font-size:9px;font-weight:700;letter-spacing:2.5px;
+  color:rgba(255,255,255,.3);margin-bottom:7px;display:block;
+}
+.login-input{
+  width:100%;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);border-radius:4px;
+  padding:13px 16px;color:#fff;
+  font-family:'Space Mono',monospace;font-size:13px;
+  outline:none;transition:all .25s;letter-spacing:.5px;
+  box-sizing:border-box;
+}
+.login-input:focus{
+  background:rgba(0,212,255,.05);
+  border-color:rgba(0,212,255,.4);
+  box-shadow:0 0 0 3px rgba(0,212,255,.07), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.login-input::placeholder{color:rgba(255,255,255,.2);}
+.login-input-wrap{position:relative;}
+.login-eye{
+  position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:rgba(255,255,255,.25);
+  cursor:pointer;font-size:14px;transition:color .2s;padding:2px;
+}
+.login-eye:hover{color:var(--cyan);}
+
+/* Botão */
+.login-btn{
+  width:100%;padding:14px;margin-top:4px;
+  background:linear-gradient(135deg,rgba(0,212,255,.18) 0%,rgba(0,150,200,.1) 100%);
+  border:1px solid rgba(0,212,255,.35);border-radius:4px;
+  color:var(--cyan);font-family:'Orbitron',monospace;
+  font-size:11px;font-weight:700;letter-spacing:4px;
+  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
+}
+.login-btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,212,255,.25) 0%,rgba(0,212,255,.05) 100%);
+  opacity:0;transition:opacity .25s;
+}
+.login-btn:hover{
+  box-shadow:0 0 30px rgba(0,212,255,.2),0 4px 16px rgba(0,0,0,.4);
+  transform:translateY(-1px);
+}
+.login-btn:hover::before{opacity:1;}
+.login-btn:active{transform:translateY(0);}
+.login-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.login-btn-text{position:relative;z-index:1;}
+
+/* Mensagens */
+.login-msg{
+  margin-top:14px;padding:11px 14px;border-radius:3px;
+  font-size:11px;line-height:1.5;text-align:center;
+  font-family:'Space Mono',monospace;
+}
+.login-msg.err{background:rgba(255,61,90,.08);color:var(--red);border:1px solid rgba(255,61,90,.2);}
+.login-msg.ok{background:rgba(0,229,160,.08);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+
+/* Link */
+.login-link{
+  font-size:9px;color:rgba(255,255,255,.25);text-align:right;
+  display:block;margin-top:8px;cursor:pointer;
+  letter-spacing:1.5px;transition:color .2s;
+}
+.login-link:hover{color:var(--cyan);}
+
+/* Status */
+.login-status{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:28px;font-size:9px;
+  color:rgba(255,255,255,.2);letter-spacing:2px;
+}
+.login-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--green);animation:pulsar 2.5s ease-in-out infinite;
+}
+
+/* Responsivo */
+@media(max-width:900px){
+  #login-screen{flex-direction:column;}
+  .lk-visual{min-height:40vh;}
+  .lk-login-side{width:100%;padding:32px 28px;}
+  .lk-vis-title{font-size:26px;}
+}
+
+/* Avatar no header quando logado */
+.user-avatar{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#000;
+  cursor:pointer;position:relative;flex-shrink:0;
+}
+.user-menu{
+  position:absolute;top:40px;right:0;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:4px;
+  min-width:190px;padding:8px 0;z-index:500;
+  box-shadow:0 8px 40px rgba(0,0,0,.7);display:none;
+}
+.user-menu.aberto{display:block;animation:menuIn .2s ease;}
+@keyframes menuIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.user-menu-item{
+  padding:9px 16px;font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:1px;
+  color:var(--text2);cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.user-menu-item:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.user-menu-item.sair{color:var(--red);}
+.user-menu-email{
+  padding:10px 16px 8px;font-size:10px;color:var(--text3);
+  letter-spacing:.5px;border-bottom:1px solid var(--border);
+  font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* SCROLL */
+.scrolly{overflow-y:auto;max-height:260px;}
+.scrolly::-webkit-scrollbar{width:3px;}
+.scrolly::-webkit-scrollbar-thumb{background:var(--border2);}
+
+/* HORÁRIOS BAR CHART */
+.bar-wrap{display:flex;gap:3px;align-items:flex-end;height:80px;overflow-x:auto;padding-bottom:2px;}
+.bar-wrap::-webkit-scrollbar{height:3px;}
+.bar-wrap::-webkit-scrollbar-thumb{background:var(--border2);}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:28px;}
+.bar{border-radius:2px 2px 0 0;width:20px;transition:opacity .2s;cursor:default;min-height:4px;}
+.bar:hover{opacity:1!important;}
+.bar-lbl{font-family:var(--cond);font-size:9px;color:var(--text3);}
+
+/* RESPONSIVE */
+@media(max-width:900px){.gcol{grid-template-columns:1fr;}.g2{grid-template-columns:1fr;}.modelos-grid{grid-template-columns:1fr 1fr;}.g4{grid-template-columns:1fr 1fr;}}
+@media(max-width:500px){.cfg-row{grid-template-columns:1fr;}.modo-cards{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN SCREEN ═══════════ -->
+<div id="login-screen">
+
+  <!-- ══════════ LADO ESQUERDO: IMAGENS ══════════ -->
+  <div class="lk-visual">
+
+    <!-- Slides de fundo -->
+    <div class="lk-slides">
+    <div class="lk-slide ativo" style="background-image:url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1400&q=80')">
+      <div class="lk-caption">IBOVESPA — B3 SÃO PAULO</div>
+    </div>
+    <div class="lk-slide" style="background-image:url('https://images.unsplash.com/photo-1642790551116-18e150f248e5?w=1400&q=80')">
+      <div class="lk-caption">GRÁFICO CANDLESTICK — 5 MIN</div>
+    </div>
+    <div class="lk-slide" style="background-image:url('https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=1400&q=80')">
+      <div class="lk-caption">GESTÃO AUTOMATIZADA</div>
+    </div>
+    </div>
+
+    <!-- Overlay grid -->
+    <div class="lk-vis-grid"></div>
+
+    <!-- Canvas com gráfico animado de fundo -->
+    <canvas id="lk-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;"></canvas>
+
+    <!-- Borda divisória -->
+    <div class="lk-divider"></div>
+
+    <!-- Conteúdo sobre imagem -->
+    <div class="lk-vis-content">
+      <div class="lk-tags" id="lk-tags"></div>
+      <div class="lk-vis-title" id="lk-vis-title">DOMINE O<br><span>MERCADO</span></div>
+      <div class="lk-vis-desc" id="lk-vis-desc">Tecnologia e inteligência artificial trabalhando para você. Operações automatizadas com precisão cirúrgica.</div>
+    </div>
+
+    <!-- Dots indicadores -->
+    <div class="lk-dots"><div class="lk-dot-item ativo" onclick="goSlide(0)"></div><div class="lk-dot-item" onclick="goSlide(1)"></div><div class="lk-dot-item" onclick="goSlide(2)"></div></div>
+
+  </div>
+
+  <!-- ══════════ LADO DIREITO: LOGIN ══════════ -->
+  <div class="lk-login-side">
+    <div class="lk-market-bg"></div>
+    <div class="lk-market-noise"></div>
+
+    <div class="login-orb a"></div>
+    <div class="login-orb b"></div>
+    <div class="login-grid"></div>
+    <div class="lk-watermark">EVA</div>
+
+    <div class="login-card">
+      <div class="login-logo">EVA</div>
+      <div class="login-sub">Trade System v5 — Acesso Restrito</div>
+      <div class="login-scanner"></div>
+
+      <div class="login-tabs">
+        <div class="login-tab ativo" id="tab-entrar" onclick="loginTab('entrar')">ENTRAR</div>
+        <div class="login-tab" id="tab-criar" onclick="loginTab('criar')">CRIAR CONTA</div>
+      </div>
+
+      <!-- ENTRAR -->
+      <div id="form-entrar">
+        <div class="login-field">
+          <label class="login-lbl">E-MAIL</label>
+          <input class="login-input" type="email" id="l-email" placeholder="seu@email.com" autocomplete="email">
+        </div>
+        <div class="login-field">
+          <label class="login-lbl">SENHA</label>
+          <div class="login-input-wrap">
+            <input class="login-input" type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password"
+              onkeydown="if(event.key==='Enter')fazerLogin()">
+            <button class="login-eye" onclick="toggleLoginEye('l-senha')">👁</button>
+          </div>
+          <span class="login-link" onclick="esqueceuSenha()">Esqueceu a senha?</span>
+        </div>
+        <button class="login-btn" id="btn-login" onclick="fazerLogin()">
+          <span class="login-btn-text">⚡ ACESSAR SISTEMA</span>
+        </button>
+      </div>
+
+      <!-- CRIAR CONTA — manutenção -->
+      <div id="form-criar" style="display:none;">
+        <div style="text-align:center;padding:28px 0 20px;">
+          <div style="font-size:36px;margin-bottom:16px;">🔧</div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;
+            letter-spacing:3px;color:var(--yellow);margin-bottom:10px;">EM MANUTENÇÃO</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;
+            color:var(--text3);letter-spacing:1px;line-height:1.7;">
+            O cadastro está temporariamente desativado.<br><br>
+            <span style="color:var(--text2);">Contate o administrador para acesso.</span>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:14px;text-align:center;">
+          <span onclick="loginTab('entrar')" style="font-family:'Barlow Condensed',sans-serif;
+            font-size:11px;font-weight:700;letter-spacing:2px;color:var(--cyan);cursor:pointer;">← VOLTAR</span>
+        </div>
+      </div>
+
+      <div id="login-msg" style="display:none;" class="login-msg"></div>
+
+      <div class="login-status">
+        <div class="login-dot"></div>
+        <span>SUPABASE CONECTADO</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">EVA <span>TRADE</span> <span style="color:var(--border2);font-size:14px">v5</span></div>
+  <div class="hd-right">
+    <div class="hd-stat"><div class="pulse" id="pw"></div><span id="wslbl" style="font-family:var(--cond);font-size:10px;letter-spacing:1px;color:var(--text3)">CONECTANDO</span></div>
+    <div class="hd-stat"><div class="dot" id="dc"></div><span>COLETOR</span></div>
+    <div class="hd-stat"><div class="dot" id="dr"></div><span>ROBÔ</span></div>
+    <div class="clock" id="clk">--:--:--</div>
+    <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()" title="Conta"></div>
+    <div class="user-menu" id="user-menu">
+      <div class="user-menu-email" id="user-menu-email">—</div>
+      <div class="user-menu-item" onclick="toggleUserMenu()">👤 Meu perfil</div>
+      <div class="user-menu-item sair" onclick="fazerLogout()">⏻ Sair</div>
+    </div>
+  </div>
+</header>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <div class="sbar-item"><span class="sbar-label">SALDO</span><span class="sbar-val neu" id="sb-saldo">R$ —</span></div>
+    <div class="sbar-item"><span class="sbar-label">HOJE</span><span class="sbar-val neu" id="sb-hoje">R$0</span></div>
+    <div class="sbar-item"><span class="sbar-label">WIN RATE</span><span class="sbar-val neu" id="sb-wr">—</span></div>
+    <div class="sbar-item"><span class="sbar-label">TRADES</span><span class="sbar-val neu" id="sb-trades">0</span></div>
+    <div class="sbar-item"><span class="sbar-label">MODELO</span><span class="sbar-val" style="color:var(--purple)" id="sb-modelo">—</span></div>
+  </div>
+  <div id="sb-robobadge" class="robo-badge off">● ROBÔ OFFLINE</div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="ntab ativo" onclick="navTo('analise')">📈 ANÁLISE</div>
+  <div class="ntab" onclick="navTo('performance')">📊 PERFORMANCE</div>
+  <div class="ntab" onclick="navTo('diario')">📔 DIÁRIO</div>
+  <div class="ntab" onclick="navTo('config')">⚙️ CONFIGURAÇÕES</div>
+  <div class="ntab" onclick="navTo('memoria')">🧠 MEMÓRIA IA</div>
+</nav>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAGE: ANÁLISE -->
+<!-- ═══════════════════════════════════════ -->
+<div class="page ativo" id="page-analise">
+  <div class="gcol">
+    <!-- COLUNA PRINCIPAL -->
+    <div>
+      <!-- Preços -->
+      <div class="card">
+        <div class="ch"><span class="ct">📈 Preços Realtime</span><span id="tick-ts" style="font-size:10px;color:var(--text3)">—</span></div>
+        <div class="cb">
+          <div class="g2">
+            <div class="preco-bloco win" id="pb-win">
+              <div class="pb-nome">ÍNDICE (WIN)</div>
+              <div class="pb-preco neu" id="win-p">—</div>
+              <div class="pb-sub"><span>BID</span><span id="win-bid">—</span>&nbsp;<span>ASK</span><span id="win-ask">—</span>&nbsp;<span>SPR</span><span id="win-spr">—</span></div>
+              <div class="pb-var" id="win-var">—</div>
+            </div>
+            <div class="preco-bloco wdo" id="pb-wdo">
+              <div class="pb-nome">DÓLAR (WDO)</div>
+              <div class="pb-preco neu" id="wdo-p">—</div>
+              <div class="pb-sub"><span>BID</span><span id="wdo-bid">—</span>&nbsp;<span>ASK</span><span id="wdo-ask">—</span>&nbsp;<span>SPR</span><span id="wdo-spr">—</span></div>
+              <div class="pb-var" id="wdo-var">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Análise IA por símbolo -->
+      <div class="card">
+        <div class="ch">
+          <span class="ct">🧠 Análise da IA</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="anal-ts" style="font-size:10px;color:var(--text3)">—</span>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="sym-tabs">
+            <div class="sym-tab ativo" onclick="trocarSym('win')">ÍNDICE</div>
+            <div class="sym-tab" onclick="trocarSym('wdo')">DÓLAR</div>
+          </div>
+
+          <!-- WIN análise -->
+          <div id="anal-win">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+              <div>
+                <div class="sinal-grande AGUARDAR" id="aw-sinal">— AGUARDAR</div>
+                <div class="conf-wrap">
+                  <div class="conf-lbl">CONFIANÇA: <strong id="aw-conf">0</strong>%</div>
+                  <div class="conf-bar"><div class="conf-fill baixa" id="aw-bar" style="width:0%"></div></div>
+                </div>
+                <div class="tf-row">
+                  <div class="tf-badge NEUTRO" id="aw-tf60">60M</div>
+                  <div class="tf-badge NEUTRO" id="aw-tf15">15M</div>
+                  <div class="tf-badge NEUTRO" id="aw-tf5">5M</div>
+                  <div id="aw-alin" class="divergente" style="margin-left:4px">〰 AGUARDANDO</div>
+                  <div class="modo-tag busca" id="aw-modo">🔍 BUSCANDO</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-bottom:3px;">SETUP</div>
+                <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--yellow)" id="aw-setup">—</div>
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-top:8px;margin-bottom:3px;">QUALIDADE</div>
+                <div style="font-family:var(--cond);font-size:13px;font-weight:700" id="aw-qual">—</div>
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-top:8px;margin-bottom:3px;">PERFIL / LOTE</div>
+                <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--cyan)" id="aw-perfil">—</div>
+              </div>
+            </div>
+
+            <!-- Aguardando estado (some após 1ª análise) -->
+            <div id="aw-aguardando" style="
+              text-align:center;padding:32px 20px;
+              background:var(--bg3);border:1px dashed var(--border2);
+              border-radius:4px;margin-top:4px;">
+              <div style="font-size:24px;margin-bottom:10px;opacity:.4;">🤖</div>
+              <div style="font-family:var(--cond);font-size:13px;font-weight:700;
+                letter-spacing:2px;color:var(--text3);margin-bottom:6px;">
+                EM ESPERA
+              </div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.6;">
+                Nenhuma análise recebida ainda.
+                
+              </div>
+            </div>
+
+            <!-- Indicadores (oculto até 1ª análise) -->
+            <div id="aw-detalhes" style="display:none;">
+              <div class="ind-grid" style="margin-bottom:10px;">
+                <div class="ind-item"><div class="ind-lbl">IFR</div><div class="ind-val NEUTRO" id="aw-ifr">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">MACD</div><div class="ind-val NEUTRO" id="aw-macd">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">VOLUME</div><div class="ind-val NEUTRO" id="aw-vol">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">ADX</div><div class="ind-val neu" id="aw-adx">—</div><div class="ind-sub">tendência</div></div>
+                <div class="ind-item"><div class="ind-lbl">VWAP</div><div class="ind-val NEUTRO" id="aw-vwap">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">BOOK</div><div class="ind-val NEUTRO" id="aw-book">—</div></div>
+              </div>
+              <!-- Entrada sugerida -->
+              <div class="g3" style="margin-bottom:10px;" id="aw-entrada-wrap">
+                <div class="ind-item"><div class="ind-lbl">ENTRADA</div><div class="ind-val" style="color:var(--cyan)" id="aw-entrada">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">STOP LOSS</div><div class="ind-val" style="color:var(--red)" id="aw-sl">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">TAKE PROFIT</div><div class="ind-val" style="color:var(--green)" id="aw-tp">—</div></div>
+              </div>
+              <!-- Suportes / Resistências -->
+              <div class="sr-grid" style="margin-bottom:10px;">
+                <div class="sr-bloco"><div class="sr-titulo r">▲ RESISTÊNCIAS</div><div id="aw-res">—</div></div>
+                <div class="sr-bloco"><div class="sr-titulo s">▼ SUPORTES</div><div id="aw-sup">—</div></div>
+              </div>
+              <!-- Resumo IA -->
+              <div class="resumo-ia">
+                <div class="scout-tag">🤖 RACIOCÍNIO DA IA</div>
+                <div id="aw-resumo">Aguardando análise...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WDO análise (mesma estrutura) -->
+          <div id="anal-wdo" style="display:none;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+              <div>
+                <div class="sinal-grande AGUARDAR" id="ad-sinal">— AGUARDAR</div>
+                <div class="conf-wrap">
+                  <div class="conf-lbl">CONFIANÇA: <strong id="ad-conf">0</strong>%</div>
+                  <div class="conf-bar"><div class="conf-fill baixa" id="ad-bar" style="width:0%"></div></div>
+                </div>
+                <div class="tf-row">
+                  <div class="tf-badge NEUTRO" id="ad-tf60">60M</div>
+                  <div class="tf-badge NEUTRO" id="ad-tf15">15M</div>
+                  <div class="tf-badge NEUTRO" id="ad-tf5">5M</div>
+                  <div id="ad-alin" class="divergente" style="margin-left:4px">〰 AGUARDANDO</div>
+                  <div class="modo-tag busca" id="ad-modo">🔍 BUSCANDO</div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-bottom:3px;">SETUP</div>
+                <div style="font-family:var(--cond);font-size:14px;font-weight:700;color:var(--yellow)" id="ad-setup">—</div>
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-top:8px;margin-bottom:3px;">QUALIDADE</div>
+                <div style="font-family:var(--cond);font-size:13px;font-weight:700" id="ad-qual">—</div>
+                <div style="font-family:var(--cond);font-size:10px;color:var(--text3);margin-top:8px;margin-bottom:3px;">PERFIL / LOTE</div>
+                <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--cyan)" id="ad-perfil">—</div>
+              </div>
+            </div>
+            <!-- Aguardando WDO -->
+            <div id="ad-aguardando" style="
+              text-align:center;padding:32px 20px;
+              background:var(--bg3);border:1px dashed var(--border2);
+              border-radius:4px;margin-top:4px;">
+              <div style="font-size:24px;margin-bottom:10px;opacity:.4;">🤖</div>
+              <div style="font-family:var(--cond);font-size:13px;font-weight:700;
+                letter-spacing:2px;color:var(--text3);margin-bottom:6px;">
+                EM ESPERA
+              </div>
+              <div style="font-size:11px;color:var(--text3);line-height:1.6;">
+                Nenhuma análise recebida ainda.
+                
+              </div>
+            </div>
+
+            <!-- Detalhes WDO (oculto até 1ª análise) -->
+            <div id="ad-detalhes" style="display:none;">
+              <div class="ind-grid" style="margin-bottom:10px;">
+                <div class="ind-item"><div class="ind-lbl">IFR</div><div class="ind-val NEUTRO" id="ad-ifr">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">MACD</div><div class="ind-val NEUTRO" id="ad-macd">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">VOLUME</div><div class="ind-val NEUTRO" id="ad-vol">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">ADX</div><div class="ind-val neu" id="ad-adx">—</div><div class="ind-sub">tendência</div></div>
+                <div class="ind-item"><div class="ind-lbl">VWAP</div><div class="ind-val NEUTRO" id="ad-vwap">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">BOOK</div><div class="ind-val NEUTRO" id="ad-book">—</div></div>
+              </div>
+              <div class="g3" style="margin-bottom:10px;">
+                <div class="ind-item"><div class="ind-lbl">ENTRADA</div><div class="ind-val" style="color:var(--cyan)" id="ad-entrada">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">STOP LOSS</div><div class="ind-val" style="color:var(--red)" id="ad-sl">—</div></div>
+                <div class="ind-item"><div class="ind-lbl">TAKE PROFIT</div><div class="ind-val" style="color:var(--green)" id="ad-tp">—</div></div>
+              </div>
+              <div class="sr-grid" style="margin-bottom:10px;">
+                <div class="sr-bloco"><div class="sr-titulo r">▲ RESISTÊNCIAS</div><div id="ad-res">—</div></div>
+                <div class="sr-bloco"><div class="sr-titulo s">▼ SUPORTES</div><div id="ad-sup">—</div></div>
+              </div>
+              <div class="resumo-ia"><div class="scout-tag">🤖 RACIOCÍNIO DA IA</div><div id="ad-resumo">Aguardando análise...</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA LATERAL -->
+    <div>
+      <!-- Posição Aberta -->
+      <div class="card">
+        <div class="ch"><span class="ct">💼 Posição Aberta</span><span id="pos-setup" style="font-size:10px;color:var(--purple)"></span></div>
+        <div class="cb" id="pos-content">
+          <div class="pos-vazia">SEM POSIÇÃO ABERTA</div>
+        </div>
+      </div>
+
+      <!-- Alertas -->
+      <div class="card">
+        <div class="ch">
+          <span class="ct">🔔 Alertas</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span id="alt-cnt" style="font-size:10px;color:var(--text3)">0</span>
+            <span onclick="marcarTodosLidos()" style="font-size:9px;cursor:pointer;color:var(--text3);font-family:var(--cond);letter-spacing:1px;">✓ LIMPAR</span>
+          </div>
+        </div>
+        <div class="scrolly" id="alt-lista" style="padding:0 14px 14px;">
+          <div style="padding:16px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM ALERTA</div>
+        </div>
+      </div>
+
+      <!-- Status sistema -->
+      <div class="card">
+        <div class="ch"><span class="ct">⚙️ Sistema</span></div>
+        <div class="cb">
+          <div class="g3">
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;text-align:center;">
+              <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:5px;">COLETOR</div>
+              <div style="font-family:var(--cond);font-size:13px;font-weight:700;" id="sys-col" class="pos">—</div>
+            </div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;text-align:center;">
+              <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:5px;">ROBÔ</div>
+              <div style="font-family:var(--cond);font-size:13px;font-weight:700;" id="sys-rob" class="pos">—</div>
+            </div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;text-align:center;">
+              <div style="font-family:var(--cond);font-size:9px;letter-spacing:2px;color:var(--text3);margin-bottom:5px;">SUPABASE</div>
+              <div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--green)">ON</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAGE: PERFORMANCE -->
+<!-- ═══════════════════════════════════════ -->
+<div class="page" id="page-performance">
+  <!-- Números do dia -->
+  <div class="card">
+    <div class="ch"><span class="ct">📊 Performance do Dia</span><span id="perf-data" style="font-size:10px;color:var(--text3)"></span></div>
+    <div class="cb">
+      <div class="g4">
+        <div class="perf-card"><div class="perf-lbl">RESULTADO</div><div class="perf-num neu" id="pf-res">R$0</div></div>
+        <div class="perf-card"><div class="perf-lbl">WIN RATE</div><div class="perf-num neu" id="pf-wr">0%</div></div>
+        <div class="perf-card"><div class="perf-lbl">TRADES</div><div class="perf-num neu" id="pf-tr">0</div></div>
+        <div class="perf-card"><div class="perf-lbl">MAIOR GANHO</div><div class="perf-num pos" id="pf-mg">R$0</div></div>
+        <div class="perf-card"><div class="perf-lbl">MELHOR SETUP</div><div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--green)" id="pf-ms">—</div></div>
+        <div class="perf-card"><div class="perf-lbl">PIOR SETUP</div><div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--red)" id="pf-ps">—</div></div>
+        <div class="perf-card"><div class="perf-lbl">SALDO FINAL</div><div style="font-family:var(--cond);font-size:13px;font-weight:700;color:var(--cyan)" id="pf-sf">—</div></div>
+        <div class="perf-card"><div class="perf-lbl">MODELO IA</div><div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--purple)" id="pf-mod">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <!-- Histórico trades -->
+    <div class="card">
+      <div class="ch"><span class="ct">📋 Histórico do Dia</span><span id="hist-cnt" style="font-size:10px;color:var(--text3)">0 trades</span></div>
+      <div class="scrolly" id="hist-lista" style="padding:0 14px 14px;">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM TRADE HOJE</div>
+      </div>
+    </div>
+
+    <!-- Setups -->
+    <div class="card">
+      <div class="ch"><span class="ct">🎯 Setups — Win Rate</span></div>
+      <div class="scrolly" id="setups-lista" style="padding:0 14px 14px;">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM HISTÓRICO</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Horários -->
+  <div class="card">
+    <div class="ch"><span class="ct">🕐 Performance por Horário</span><span style="font-size:10px;color:var(--text3)">altura = nº trades · cor = win rate</span></div>
+    <div class="cb">
+      <div class="bar-wrap" id="bar-horas"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAGE: DIÁRIO -->
+<!-- ═══════════════════════════════════════ -->
+<div class="page" id="page-diario">
+  <div class="card">
+    <div class="ch">
+      <span class="ct">📔 Diário IA</span>
+      <span id="diar-data" style="font-size:10px;color:var(--text3)">Gerado às 17h</span>
+    </div>
+    <div id="diar-body" class="diario-txt">
+      <div class="diario-vazio">O diário é gerado automaticamente às 17h após o fechamento do mercado.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAGE: CONFIGURAÇÕES -->
+<!-- ═══════════════════════════════════════ -->
+<div class="page" id="page-config">
+  <div class="gcol">
+    <div>
+      <!-- API Keys -->
+      <div class="cfg-section">
+        <div class="cfg-title">1 — API KEYS</div>
+        <div class="cfg-row">
+          <div class="cfg-field">
+            <div class="cfg-lbl">🟢 OPENAI — GPT-4o / GPT-4.1 mini</div>
+            <div class="eye-wrap">
+              <input class="cfg-input" type="password" id="cfg-key-openai" placeholder="sk-proj-...">
+              <button class="eye-btn" onclick="toggleEye('cfg-key-openai')">👁</button>
+            </div>
+          </div>
+          <div class="cfg-field">
+            <div class="cfg-lbl">🟣 ANTHROPIC — Claude Sonnet 4</div>
+            <div class="eye-wrap">
+              <input class="cfg-input" type="password" id="cfg-key-anthropic" placeholder="sk-ant-...">
+              <button class="eye-btn" onclick="toggleEye('cfg-key-anthropic')">👁</button>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px;">As chaves são salvas no Supabase (criptografadas) e usadas apenas para chamar a IA escolhida.</div>
+      </div>
+
+      <!-- Modo operação -->
+      <div class="cfg-section">
+        <div class="cfg-title">2 — MODO DE OPERAÇÃO</div>
+        <div class="modo-cards">
+          <div class="modo-card sel" id="mc-simples" onclick="selModo('simples')">
+            <div class="modo-card-nome">🤖 IA SIMPLES</div>
+            <div class="modo-card-desc">Uma IA analisa tudo a cada ciclo.<br>Mais direto e menor custo.</div>
+          </div>
+          <div class="modo-card" id="mc-dupla" onclick="selModo('dupla')">
+            <div class="modo-card-nome">🤖🤖 DUPLA IA</div>
+            <div class="modo-card-desc">Scout filtra · Decisor confirma.<br>Só entra se as duas concordarem.</div>
+          </div>
+        </div>
+        <div class="cfg-field" style="margin-bottom:10px;">
+          <div class="cfg-lbl">ESCOLHA O MODELO (SCOUT / PRINCIPAL)</div>
+          <div class="modelos-grid" id="modelos-grid">
+            <div class="model-card sel" onclick="selModelo(this,'gpt-4o-mini')" data-m="gpt-4o-mini">
+              <div class="model-nome">GPT-4o mini</div>
+              <div class="model-info">🟢 OpenAI · ~US$0,50/dia</div>
+              <span class="model-check">✓</span>
+            </div>
+            <div class="model-card" onclick="selModelo(this,'gpt-4.1-mini')" data-m="gpt-4.1-mini">
+              <div class="model-nome">GPT-4.1 mini</div>
+              <div class="model-info">🟢 OpenAI · ~US$0,40/dia</div>
+              <span class="model-check">✓</span>
+            </div>
+            <div class="model-card" onclick="selModelo(this,'gpt-4o')" data-m="gpt-4o">
+              <div class="model-nome">GPT-4o</div>
+              <div class="model-info">🟢 OpenAI · ~US$8/dia</div>
+              <span class="model-check">✓</span>
+            </div>
+            <div class="model-card" onclick="selModelo(this,'claude-sonnet-4-5')" data-m="claude-sonnet-4-5">
+              <div class="model-nome">Claude Sonnet</div>
+              <div class="model-info">🟣 Anthropic · ~US$10/dia</div>
+              <span class="model-check">✓</span>
+            </div>
+          </div>
+        </div>
+        <!-- Decisor (visível só em dupla) -->
+        <div id="decisor-wrap" style="display:none;">
+          <div class="cfg-lbl" style="margin-bottom:8px;">DECISOR (confirma a entrada)</div>
+          <div class="modelos-grid" id="decisor-grid">
+            <div class="model-card" onclick="selDecisor(this,'gpt-4.1-mini')" data-m="gpt-4.1-mini">
+              <div class="model-nome">GPT-4.1 mini</div>
+              <div class="model-info">🟢 econômico</div>
+              <span class="model-check">✓</span>
+            </div>
+            <div class="model-card sel" onclick="selDecisor(this,'gpt-4o')" data-m="gpt-4o">
+              <div class="model-nome">GPT-4o</div>
+              <div class="model-info">🟢 mais preciso</div>
+              <span class="model-check">✓</span>
+            </div>
+            <div class="model-card" onclick="selDecisor(this,'claude-sonnet-4-5')" data-m="claude-sonnet-4-5">
+              <div class="model-nome">Claude Sonnet</div>
+              <div class="model-info">🟣 Anthropic</div>
+              <span class="model-check">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parâmetros -->
+      <div class="cfg-section">
+        <div class="cfg-title">3 — PARÂMETROS</div>
+        <div class="cfg-row">
+          <div class="cfg-field">
+            <div class="cfg-lbl">CONFIANÇA MÍNIMA (%)</div>
+            <input class="cfg-input" type="number" id="cfg-conf" min="50" max="95" value="68">
+          </div>
+          <div class="cfg-field">
+            <div class="cfg-lbl">PERDA MÁXIMA/DIA (R$)</div>
+            <input class="cfg-input" type="number" id="cfg-perda" value="500">
+          </div>
+          <div class="cfg-field">
+            <div class="cfg-lbl">LOTE MÍNIMO</div>
+            <input class="cfg-input" type="number" id="cfg-lmin" value="1" min="1">
+          </div>
+          <div class="cfg-field">
+            <div class="cfg-lbl">LOTE MÁXIMO</div>
+            <input class="cfg-input" type="number" id="cfg-lmax" value="3" min="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- Salvar / Testar -->
+      <div class="cfg-section">
+        <div class="cfg-title">4 — SALVAR E TESTAR</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="salvarConfig()">💾 SALVAR CONFIGURAÇÃO</button>
+          <button class="btn btn-success" onclick="testarConexao()">⚡ TESTAR CONEXÃO</button>
+        </div>
+        <div id="cfg-status" style="margin-top:10px;font-size:11px;color:var(--text2);"></div>
+      </div>
+
+      <!-- Agendamento -->
+      <div class="cfg-section">
+        <div class="cfg-title">5 — AGENDAMENTO AUTOMÁTICO</div>
+        <div class="toggle-wrap" style="margin-bottom:14px;">
+          <div class="toggle" id="tog-agenda" onclick="toggleAgenda()"></div>
+          <span class="toggle-lbl" id="tog-agenda-lbl">DESATIVADO</span>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-field">
+            <div class="cfg-lbl" style="color:var(--green)">⚡ LIGAR ÀS</div>
+            <input class="cfg-input" type="time" id="cfg-liga" value="08:45">
+          </div>
+          <div class="cfg-field">
+            <div class="cfg-lbl" style="color:var(--red)">● DESLIGAR ÀS</div>
+            <input class="cfg-input" type="time" id="cfg-desliga" value="17:00">
+          </div>
+        </div>
+        <div class="cfg-field" style="margin-bottom:12px;">
+          <div class="cfg-lbl">DIAS DA SEMANA</div>
+          <div class="dias-row" style="margin-top:6px;">
+            <div class="dia-btn on" data-d="1" onclick="toggleDia(this)">SEG</div>
+            <div class="dia-btn on" data-d="2" onclick="toggleDia(this)">TER</div>
+            <div class="dia-btn on" data-d="3" onclick="toggleDia(this)">QUA</div>
+            <div class="dia-btn on" data-d="4" onclick="toggleDia(this)">QUI</div>
+            <div class="dia-btn on" data-d="5" onclick="toggleDia(this)">SEX</div>
+            <div class="dia-btn" data-d="6" onclick="toggleDia(this)">SAB</div>
+            <div class="dia-btn" data-d="7" onclick="toggleDia(this)">DOM</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="salvarAgenda()">💾 SALVAR AGENDAMENTO</button>
+      </div>
+    </div>
+
+    <!-- Coluna direita: limites configuráveis + IA autônoma -->
+    <div>
+
+      <!-- TOGGLE: IA DECIDE OS LIMITES -->
+      <div class="cfg-section" id="ia-auto-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="cfg-title" style="margin-bottom:0;">🤖 IA DECIDE OS LIMITES</div>
+          <div class="toggle" id="tog-ia-auto" onclick="toggleIaAuto()"></div>
+        </div>
+        <div id="ia-auto-desc" style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:10px;">
+          Quando ativado, a IA analisa seu histórico de performance diariamente e calibra automaticamente:<br>
+          confiança mínima, lote máximo, número de trades e horários de operação.<br>
+          <span style="color:var(--yellow)">Você define apenas o freio absoluto: perda máxima/dia.</span>
+        </div>
+        <!-- Última decisão da IA -->
+        <div id="ia-auto-ultima" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px;">
+          <div style="font-family:var(--cond);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--purple);margin-bottom:5px;">ÚLTIMA CALIBRAÇÃO DA IA</div>
+          <div id="ia-auto-ts" style="font-size:10px;color:var(--text3);margin-bottom:4px;">—</div>
+          <div id="ia-auto-motivo" style="font-size:11px;color:var(--text2);line-height:1.5;">—</div>
+        </div>
+      </div>
+
+      <!-- LIMITES DE SEGURANÇA configuráveis -->
+      <div class="cfg-section">
+        <div class="cfg-title">🔒 LIMITES DE SEGURANÇA</div>
+
+        <!-- Perda máxima — sempre editável (freio absoluto) -->
+        <div style="background:rgba(255,61,90,.06);border:1px solid rgba(255,61,90,.2);border-radius:3px;padding:10px 12px;margin-bottom:10px;">
+          <div style="font-family:var(--cond);font-size:9px;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:6px;">🛑 FREIO ABSOLUTO — SEMPRE ATIVO</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <span style="font-family:var(--cond);font-size:11px;color:var(--text2);">PERDA MÁX/DIA</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="color:var(--text3);font-size:11px;">R$</span>
+              <input id="lim-perda-input" type="number" min="100" max="5000" value="500"
+                style="width:80px;background:var(--bg4);border:1px solid rgba(255,61,90,.3);border-radius:3px;
+                padding:5px 8px;color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;text-align:right;outline:none;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Limites IA ou Manuais -->
+        <div id="limites-manuais">
+          <!-- Confiança mínima -->
+          <div class="limite-row" id="lrow-conf">
+            <span class="limite-nome">CONFIANÇA MÍNIMA</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input id="lim-conf-input" type="number" min="50" max="95" value="68"
+                style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+                padding:4px 7px;color:var(--cyan);font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;outline:none;">
+              <span style="color:var(--text3);font-size:11px;">%</span>
+            </div>
+          </div>
+          <!-- Lote máximo -->
+          <div class="limite-row" id="lrow-lote">
+            <span class="limite-nome">LOTE MÁXIMO</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input id="lim-lote-input" type="number" min="1" max="10" value="3"
+                style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+                padding:4px 7px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;outline:none;">
+              <span style="color:var(--text3);font-size:11px;">lot</span>
+            </div>
+          </div>
+          <!-- Máx trades -->
+          <div class="limite-row" id="lrow-trades">
+            <span class="limite-nome">MÁX TRADES/DIA</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input id="lim-trades-input" type="number" min="1" max="20" value="5"
+                style="width:55px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;
+                padding:4px 7px;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;outline:none;">
+            </div>
+          </div>
+          <!-- Horário -->
+          <div class="limite-row" id="lrow-horario">
+            <span class="limite-nome">HORÁRIO</span>
+            <span class="limite-val" style="color:var(--cyan)" id="lim-horario">8h45 – 17h</span>
+          </div>
+          <!-- Posições -->
+          <div class="limite-row">
+            <span class="limite-nome">POSIÇÕES SIMULT.</span>
+            <span class="limite-val" style="color:var(--green)">2 (ÍNDICE + DÓLAR)</span>
+          </div>
+        </div>
+
+        <!-- Overlay quando IA controla -->
+        <div id="limites-ia-ativo" style="display:none;margin-top:6px;">
+          <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:3px;
+            padding:10px 12px;text-align:center;">
+            <div style="font-family:var(--cond);font-size:11px;color:var(--purple);font-weight:700;letter-spacing:1px;margin-bottom:4px;">
+              🤖 CALIBRAÇÃO AUTOMÁTICA ATIVA
+            </div>
+            <div style="font-size:10px;color:var(--text3);line-height:1.5;">
+              A IA revisa os limites diariamente.<br>
+              Apenas a perda máxima/dia é controlada por você.
+            </div>
+          </div>
+          <div style="margin-top:8px;" id="limites-ia-valores">
+            <!-- preenchido dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Botão salvar limites -->
+        <div style="margin-top:12px;">
+          <button class="btn btn-danger" style="width:100%" onclick="salvarLimites()">💾 SALVAR LIMITES</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- PAGE: MEMÓRIA IA -->
+<!-- ═══════════════════════════════════════ -->
+<div class="page" id="page-memoria">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="ch"><span class="ct">📚 Aprendizados dos Diários</span><span id="aprend-cnt" style="font-size:10px;color:var(--text3)">0</span></div>
+        <div class="scrolly" id="aprend-lista" style="padding:0 14px 14px;">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM APRENDIZADOS AINDA</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">🎯 Setups — Memória Completa</span></div>
+        <div class="scrolly" id="mem-setups" style="padding:0 14px 14px;">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM HISTÓRICO</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="ch"><span class="ct">📊 Estatísticas Gerais</span></div>
+        <div class="cb" id="mem-stats">
+          <div style="color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;text-align:center;padding:20px;">CARREGANDO...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">🕐 Memória por Horário</span></div>
+        <div class="cb">
+          <div class="bar-wrap" id="bar-mem-horas"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE
+// ══════════════════════════════════════════
+const SB_URL = 'https://tjzztwdzvenemlljzani.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqenp0d2R6dmVuZW1sbGp6YW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTAxNDIsImV4cCI6MjA4ODc2NjE0Mn0.BsmN7iPRbKBRTCqMEPlh4ByuF42pF_-ZnQ-k0TB-qfc'
+const SB_SVC = SB_KEY // dashboard usa anon key — service key fica só no robô local
+const { createClient } = supabase
+const sb = createClient(SB_URL, SB_KEY)
+
+// ── Escrita via service key ──
+async function sbWrite(table, data, method='POST', query='') {
+  const res = await fetch(`${SB_URL}/rest/v1/${table}${query}`, {
+    method, headers: {
+      'apikey': SB_SVC, 'Authorization': `Bearer ${SB_SVC}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    }, body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+// ══════════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════════
+const S = {
+  ticks:{}, ticksRef:{}, analises:{}, posicoes:{},
+  trades:[], alertas:[], aprendizados:[],
+  perfDia:null, setups:[], horarios:[], stats:{}, diario:null, sistema:{}
+}
+
+// ══════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════
+setInterval(()=>{ document.getElementById('clk').textContent = new Date().toLocaleTimeString('pt-BR',{hour12:false}) }, 1000)
+
+// ══════════════════════════════════════════
+// NAVEGAÇÃO
+// ══════════════════════════════════════════
+function navTo(p) {
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('ativo'))
+  document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('ativo'))
+  document.getElementById('page-'+p).classList.add('ativo')
+  event.target.classList.add('ativo')
+  if(p==='performance') { renderHoras(); renderSetups() }
+  if(p==='memoria') { renderMemSetups(); renderMemStats(); renderMemHoras() }
+  if(p==='diario') renderDiario()
+}
+
+function trocarSym(s) {
+  document.querySelectorAll('.sym-tab').forEach((t,i)=>t.classList.toggle('ativo',['win','wdo'][i]===s))
+  document.getElementById('anal-win').style.display = s==='win'?'block':'none'
+  document.getElementById('anal-wdo').style.display = s==='wdo'?'block':'none'
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+function toast(msg, tipo='a') {
+  const el = document.createElement('div')
+  el.className = `toast ${tipo}`
+  const ico = {c:'📈',v:'📉',a:'🔔'}
+  el.innerHTML = `<span>${ico[tipo]||'🔔'}</span><span>${msg}</span>`
+  document.getElementById('toast').appendChild(el)
+  setTimeout(()=>{ el.style.animation='sout .3s ease forwards'; setTimeout(()=>el.remove(),300) }, 5000)
+}
+
+// ══════════════════════════════════════════
+// RENDER TICKS
+// ══════════════════════════════════════════
+function renderTick(t) {
+  const isW = t.symbol?.startsWith('WIN')
+  const pre = isW ? 'win' : 'wdo'
+  const ant = S.ticks[t.symbol] || t
+  S.ticks[t.symbol] = t
+  if (!S.ticksRef[t.symbol]) S.ticksRef[t.symbol] = parseFloat(t.ultimo||t.bid)
+
+  const ult = parseFloat(t.ultimo||t.bid)
+  const antU = parseFloat(ant.ultimo||ant.bid)
+  const el = document.getElementById(`${pre}-p`)
+  el.textContent = isW ? ult.toFixed(0) : ult.toFixed(2)
+  el.className = `pb-preco ${ult>antU?'up':ult<antU?'dn':'neu'}`
+  el.classList.add('tick-flash')
+  setTimeout(()=>el.classList.remove('tick-flash'),350)
+
+  document.getElementById(`${pre}-bid`).textContent = parseFloat(t.bid).toFixed(isW?0:2)
+  document.getElementById(`${pre}-ask`).textContent = parseFloat(t.ask).toFixed(isW?0:2)
+  document.getElementById(`${pre}-spr`).textContent = (t.ask-t.bid).toFixed(isW?0:2)
+
+  const vPct = ((ult-S.ticksRef[t.symbol])/S.ticksRef[t.symbol]*100)
+  const vEl  = document.getElementById(`${pre}-var`)
+  vEl.textContent = `${vPct>=0?'+':''}${vPct.toFixed(2)}%`
+  vEl.className   = `pb-var ${vPct>=0?'up':'dn'}`
+
+  document.getElementById('tick-ts').textContent = new Date(t.ts).toLocaleTimeString('pt-BR',{hour12:false})
+
+  // Atualiza P&L se há posição
+  const pos = Object.values(S.posicoes).find(p=>p.symbol===t.symbol&&p.status==='aberta')
+  if (pos) renderPosicao()
+}
+
+// ══════════════════════════════════════════
+// RENDER ANÁLISE
+// ══════════════════════════════════════════
+function renderAnalise(a) {
+  const isW = a.symbol?.startsWith('WIN')
+  const pre = isW ? 'aw' : 'ad'
+  S.analises[a.symbol] = a
+
+  const sinal = a.sinal_final || 'AGUARDAR'
+  const conf  = a.confianca_final || 0
+
+  // Badge
+  const badge = document.getElementById(`${pre}-sinal`)
+  badge.textContent = sinal==='COMPRA'?'▲ COMPRA':sinal==='VENDA'?'▼ VENDA':'— AGUARDAR'
+  badge.className = `sinal-grande ${sinal}`
+
+  // Confiança
+  document.getElementById(`${pre}-conf`).textContent = conf
+  const bar = document.getElementById(`${pre}-bar`)
+  bar.style.width = `${conf}%`
+  bar.className = `conf-fill ${conf>=75?'alta':conf>=60?'media':'baixa'}`
+
+  // TFs
+  ;[['60min','tf60'],['15min','tf15'],['5min','tf5']].forEach(([k,id])=>{
+    const v = a[`tend_${k}`]||'NEUTRO'
+    const el = document.getElementById(`${pre}-${id}`)
+    el.textContent = id.includes('60')?'60M':id.includes('15')?'15M':'5M'
+    el.className = `tf-badge ${v}`
+  })
+
+  // Alinhamento
+  const alEl = document.getElementById(`${pre}-alin`)
+  if (a.alinhamento_tfs) { alEl.textContent='✅ TFS ALINHADOS'; alEl.className='alinhado' }
+  else { alEl.textContent='⚠️ DIVERGENTES'; alEl.className='divergente' }
+
+  // Modo
+  const mEl = document.getElementById(`${pre}-modo`)
+  const modo = a.modo||'busca_entrada'
+  mEl.textContent = modo==='monitoramento'?'📊 MONIT.':'🔍 BUSCANDO'
+  mEl.className = `modo-tag ${modo==='monitoramento'?'monit':'busca'}`
+
+  // Setup / qualidade / perfil
+  document.getElementById(`${pre}-setup`).textContent  = a.setup_final || (sinal==='AGUARDAR' ? 'NENHUM' : '—')
+  document.getElementById(`${pre}-qual`).textContent   = a.qualidade_final || '—'
+  document.getElementById(`${pre}-perfil`).textContent = `${(a.perfil_ia||'normal').toUpperCase()} — ${a.lotes_ia||1} LOTE`
+
+  // Entrada/SR: opacidade reduzida quando AGUARDAR
+  const ewrap = document.getElementById(`${pre}-entrada-wrap`)
+  if (ewrap) ewrap.style.opacity = (sinal==='AGUARDAR') ? '0.3' : '1'
+
+  // Indicadores
+  const setInd = (id, val) => {
+    const el = document.getElementById(`${pre}-${id}`)
+    if (!el) return
+    el.textContent = val||'—'
+    el.className = `ind-val ${val||'NEUTRO'}`
+  }
+  setInd('ifr',  a.ifr_status)
+  setInd('macd', a.macd_status)
+  setInd('vol',  a.volume_status)
+  setInd('vwap', a.vwap_posicao)
+  setInd('book', a.book_pressao)
+  const adxEl = document.getElementById(`${pre}-adx`)
+  adxEl.textContent = a.adx_valor ? parseFloat(a.adx_valor).toFixed(1) : '—'
+  adxEl.className = `ind-val ${parseFloat(a.adx_valor||0)>30?'pos':parseFloat(a.adx_valor||0)<20?'neg':'neu'}`
+
+  // Entrada sugerida
+  if (sinal !== 'AGUARDAR') {
+    document.getElementById(`${pre}-entrada`).textContent = a.entrada_sugerida ? parseFloat(a.entrada_sugerida).toFixed(0) : '—'
+    document.getElementById(`${pre}-sl`).textContent      = a.sl_sugerido      ? parseFloat(a.sl_sugerido).toFixed(0)      : '—'
+    document.getElementById(`${pre}-tp`).textContent      = a.tp_sugerido      ? parseFloat(a.tp_sugerido).toFixed(0)      : '—'
+  }
+
+  // Suportes / Resistências
+  const renderSR = (id, arr) => {
+    const el = document.getElementById(`${pre}-${id}`)
+    if (!el) return
+    if (!arr?.length) { el.innerHTML='<div class="sr-nivel" style="color:var(--text3)">—</div>'; return }
+    el.innerHTML = arr.map(v=>`<div class="sr-nivel">${parseFloat(v).toFixed(0)}</div>`).join('')
+  }
+  renderSR('res', Array.isArray(a.resistencias)?a.resistencias:JSON.parse(a.resistencias||'[]'))
+  renderSR('sup', Array.isArray(a.suportes)?a.suportes:JSON.parse(a.suportes||'[]'))
+
+  // Resumo IA
+  document.getElementById(`${pre}-resumo`).textContent = a.resumo_ia||a.scout_motivo||'Aguardando...'
+
+  // Status bar modelo
+  document.getElementById('sb-modelo').textContent = a.scout_modelo||a.decisor_modelo||'—'
+  document.getElementById('anal-ts').textContent   = new Date(a.ts).toLocaleTimeString('pt-BR',{hour12:false})
+
+  // Toast sinal
+  const lastSinal = S._lastSinal?.[a.symbol]
+  if ((sinal==='COMPRA'||sinal==='VENDA') && lastSinal!==sinal) {
+    if (!S._lastSinal) S._lastSinal={}
+    S._lastSinal[a.symbol] = sinal
+    toast(`${sinal} ${a.symbol} — ${conf}% | ${a.setup_final||''}`, sinal==='COMPRA'?'c':'v')
+  }
+}
+
+// ══════════════════════════════════════════
+// RENDER POSIÇÃO
+// ══════════════════════════════════════════
+function renderPosicao() {
+  const pos = Object.values(S.posicoes).find(p=>p.status==='aberta')
+  const el  = document.getElementById('pos-content')
+  document.getElementById('pos-setup').textContent = pos?.setup||''
+
+  if (!pos) { el.innerHTML='<div class="pos-vazia">SEM POSIÇÃO ABERTA</div>'; return }
+
+  const pnl = parseFloat(pos.pnl_brl||0)
+  const pts = parseFloat(pos.pnl_pts||0)
+  const tp  = parseFloat(pos.tp||0)
+  const ent = parseFloat(pos.entrada||0)
+  const prog = tp && ent ? Math.min(100, Math.abs((parseFloat(pos.preco_atual||ent)-ent)/(tp-ent)*100)) : 0
+
+  el.innerHTML = `
+    <div class="pos-lateral">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+        <div>
+          <div class="pos-tipo ${pos.tipo}">${pos.tipo==='COMPRA'?'▲':'▼'} ${pos.tipo}</div>
+          <div style="font-family:var(--cond);font-size:12px;color:var(--text2);letter-spacing:2px;">${pos.symbol} · ${pos.lote}lot</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="pnl-g ${pnl>=0?'pos':'neg'}">${pnl>=0?'+':''}R$${Math.abs(pnl).toFixed(2)}</div>
+          <div class="pnl-pts">${pts>=0?'+':''}${pts.toFixed(0)} pts</div>
+        </div>
+      </div>
+      <div class="pos-rows">
+        <div class="pos-row-item"><div class="pri-lbl">ENTRADA</div><div class="pri-val en">${ent.toFixed(0)}</div></div>
+        <div class="pos-row-item"><div class="pri-lbl">STOP LOSS</div><div class="pri-val sl">${parseFloat(pos.sl||0).toFixed(0)}</div></div>
+        <div class="pos-row-item"><div class="pri-lbl">TAKE PROFIT</div><div class="pri-val tp">${tp.toFixed(0)}</div></div>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${prog.toFixed(0)}%"></div></div>
+      <div style="text-align:right;font-size:10px;color:var(--text3);margin-top:3px;">${prog.toFixed(0)}% DO OBJETIVO</div>
+    </div>`
+}
+
+// ══════════════════════════════════════════
+// RENDER PERFORMANCE
+// ══════════════════════════════════════════
+function renderPerf() {
+  const p = S.perfDia
+  if (!p) return
+  const res = parseFloat(p.resultado||0)
+  const wr  = parseFloat(p.win_rate||0)
+  const mg  = parseFloat(p.maior_ganho||0)
+
+  const rEl = document.getElementById('pf-res')
+  rEl.textContent = `${res>=0?'+':''}R$${Math.abs(res).toFixed(2)}`
+  rEl.className   = `perf-num ${res>0?'pos':res<0?'neg':'neu'}`
+
+  const wEl = document.getElementById('pf-wr')
+  wEl.textContent = `${wr.toFixed(0)}%`
+  wEl.className   = `perf-num ${wr>=60?'pos':wr>=40?'neu':'neg'}`
+
+  document.getElementById('pf-tr').textContent = p.trades||0
+  document.getElementById('pf-mg').textContent = `+R$${mg.toFixed(2)}`
+  document.getElementById('pf-ms').textContent = p.melhor_setup||'—'
+  document.getElementById('pf-ps').textContent = p.pior_setup||'—'
+  document.getElementById('pf-mod').textContent = p.modelo_ia||'—'
+  if (p.saldo_final) document.getElementById('pf-sf').textContent =
+    `R$ ${parseFloat(p.saldo_final).toLocaleString('pt-BR',{minimumFractionDigits:2})}`
+
+  // Status bar
+  const sbEl = document.getElementById('sb-hoje')
+  sbEl.textContent = `${res>=0?'+':''}R$${Math.abs(res).toFixed(2)}`
+  sbEl.className   = `sbar-val ${res>0?'pos':res<0?'neg':'neu'}`
+  document.getElementById('sb-wr').textContent    = `${wr.toFixed(0)}%`
+  document.getElementById('sb-trades').textContent = p.trades||0
+  document.getElementById('perf-data').textContent = new Date().toLocaleDateString('pt-BR')
+}
+
+function renderHistorico() {
+  const el = document.getElementById('hist-lista')
+  document.getElementById('hist-cnt').textContent = `${S.trades.length} trades`
+  if (!S.trades.length) {
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM TRADE HOJE</div>'
+    return
+  }
+  el.innerHTML = S.trades.map(t=>{
+    const res = parseFloat(t.resultado_brl||0)
+    const hora = t.ts_entrada ? new Date(t.ts_entrada).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—'
+    return `<div class="trade-row">
+      <span class="tr-hora">${hora}</span>
+      <span class="tr-tipo ${t.tipo}">${t.tipo==='COMPRA'?'▲':'▼'} ${t.tipo}</span>
+      <span class="tr-setup">${t.setup||t.symbol||'—'}</span>
+      <span class="tr-res ${res>=0?'pos':'neg'}">${res>=0?'+':''}R$${Math.abs(res).toFixed(2)}</span>
+    </div>`
+  }).join('')
+}
+
+function renderSetups() {
+  const el = document.getElementById('setups-lista')
+  if (!S.setups.length) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM HISTÓRICO</div>'; return }
+  el.innerHTML = [...S.setups].sort((a,b)=>b.win_rate-a.win_rate).slice(0,12).map(s=>{
+    const wr = parseFloat(s.win_rate||0)
+    const cls = wr>=65?'bom':wr>=45?'medio':'ruim'
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+        <span style="font-family:var(--cond);font-size:11px;font-weight:600;">${s.setup}</span>
+        <span class="mem-wr ${cls}">${wr.toFixed(0)}%</span>
+      </div>
+      <div class="mem-bar"><div class="mem-fill ${cls}" style="width:${wr}%"></div></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${s.trades} trades · R$${parseFloat(s.resultado||0).toFixed(0)} · conf ${parseFloat(s.confianca_media||0).toFixed(0)}%</div>
+    </div>`
+  }).join('')
+}
+
+function renderHoras() {
+  const el = document.getElementById('bar-horas')
+  const horas = S.horarios.filter(h=>h.hora>=8&&h.hora<=17&&h.trades>0)
+  if (!horas.length) { el.innerHTML='<span style="color:var(--text3);font-size:11px;">SEM DADOS</span>'; return }
+  const max = Math.max(...horas.map(h=>h.trades),1)
+  el.innerHTML = horas.map(h=>{
+    const wr  = parseFloat(h.win_rate||0)
+    const alt = Math.max(6,(h.trades/max)*72)
+    const cor = wr>=65?'var(--green)':wr>=45?'var(--yellow)':'var(--red)'
+    return `<div class="bar-col">
+      <div class="bar" style="height:${alt}px;background:${cor};opacity:.8;"
+        title="${h.hora}h: ${h.trades} trades, WR ${wr.toFixed(0)}%"
+        onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8"></div>
+      <div class="bar-lbl">${h.hora}h</div>
+    </div>`
+  }).join('')
+}
+
+// ══════════════════════════════════════════
+// RENDER ALERTAS
+// ══════════════════════════════════════════
+function renderAlertas() {
+  const el  = document.getElementById('alt-lista')
+  const cnt = S.alertas.filter(a=>!a.lido).length
+  document.getElementById('alt-cnt').textContent = cnt?`${cnt} novos`:'0'
+  if (!S.alertas.length) { el.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">NENHUM ALERTA</div>'; return }
+  const icons={ordem_executada:'✅',stop_atingido:'🛑',gain_atingido:'🎯',erro_sistema:'⚠️',perda_max:'❌',config_atualizada:'⚙️'}
+  el.innerHTML = S.alertas.slice(0,10).map(a=>{
+    const hora = a.ts?new Date(a.ts).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''
+    const nL = !a.lido
+    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);${nL?'border-left:2px solid var(--cyan);padding-left:6px':'opacity:.55'}">
+      <span style="font-size:12px;flex-shrink:0;">${icons[a.tipo]||'🔔'}</span>
+      <span style="font-size:11px;color:${nL?'var(--text)':'var(--text2)'};flex:1;line-height:1.4;">${a.mensagem}</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+        <span style="font-size:10px;color:var(--text3);white-space:nowrap;">${hora}</span>
+        ${nL?`<span onclick="marcarLido(${a.id})" style="font-size:9px;cursor:pointer;color:var(--cyan);font-family:var(--cond);letter-spacing:1px;">✓ LER</span>`:''}
+      </div>
+    </div>`
+  }).join('')
+}
+
+// ══════════════════════════════════════════
+// RENDER DIÁRIO
+// ══════════════════════════════════════════
+function renderDiario() {
+  const el = document.getElementById('diar-body')
+  if (!S.diario) { el.innerHTML='<div class="diario-vazio">O diário é gerado automaticamente às 17h após o fechamento do mercado.</div>'; return }
+  document.getElementById('diar-data').textContent = `Gerado em ${new Date(S.diario.ts_gerado).toLocaleString('pt-BR')}`
+  let html = (S.diario.texto_completo||'')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^(\d+\.\s*[A-ZÇÃÁÉÍÓÚ ]+)$/gm,'<h2>$1</h2>')
+    .replace(/\n/g,'<br>')
+    .replace(/R\$([+-]?\d[\d.,]*)/g,(_,v)=>`<span style="color:${parseFloat(v.replace(',','.')||0)>=0?'var(--green)':'var(--red)'}">R$${v}</span>`)
+  el.innerHTML = html
+}
+
+// ══════════════════════════════════════════
+// RENDER MEMÓRIA
+// ══════════════════════════════════════════
+function renderAprendizados() {
+  const el  = document.getElementById('aprend-lista')
+  const cnt = S.aprendizados.length
+  document.getElementById('aprend-cnt').textContent = cnt
+  if (!cnt) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;letter-spacing:1px;">SEM APRENDIZADOS AINDA</div>'; return }
+  const lbl={licao:'LIÇÃO',erro_recorrente:'ERRO RECORRENTE',recomendacao:'RECOMENDAÇÃO',setup_evitar:'SETUP EVITAR'}
+  el.innerHTML = S.aprendizados.slice(0,20).map(a=>
+    `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div class="aprend-tipo ${a.tipo}">${lbl[a.tipo]||a.tipo} · ${a.data||''}</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5;">${a.texto}</div>
+    </div>`
+  ).join('')
+}
+
+function renderMemSetups() {
+  const el = document.getElementById('mem-setups')
+  if (!S.setups.length) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--cond);font-size:11px;">SEM HISTÓRICO</div>'; return }
+  el.innerHTML = [...S.setups].sort((a,b)=>b.resultado-a.resultado).map(s=>{
+    const wr = parseFloat(s.win_rate||0)
+    const cls = wr>=65?'bom':wr>=45?'medio':'ruim'
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-family:var(--cond);font-size:11px;">${s.setup}</span>
+        <span class="mem-wr ${cls}">${wr.toFixed(0)}% WR</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);">${s.trades}t · R$${parseFloat(s.resultado||0).toFixed(0)} · conf ${parseFloat(s.confianca_media||0).toFixed(0)}%</div>
+    </div>`
+  }).join('')
+}
+
+function renderMemStats() {
+  const el = document.getElementById('mem-stats')
+  const st = S.stats
+  if (!Object.keys(st).length) { el.innerHTML='<div style="color:var(--text3);text-align:center;font-family:var(--cond);font-size:11px;">CARREGANDO...</div>'; return }
+  const wr  = parseFloat(st.win_rate_geral||0)
+  const res = parseFloat(st.resultado_total||0)
+  el.innerHTML = `
+    <div class="g2" style="gap:8px;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
+        <div class="perf-lbl">TOTAL TRADES</div>
+        <div class="perf-num neu">${st.total_trades||0}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
+        <div class="perf-lbl">WIN RATE GERAL</div>
+        <div class="perf-num ${wr>=60?'pos':wr>=40?'neu':'neg'}">${wr.toFixed(0)}%</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
+        <div class="perf-lbl">RESULTADO TOTAL</div>
+        <div class="perf-num ${res>=0?'pos':'neg'}">${res>=0?'+':''}R$${Math.abs(res).toFixed(0)}</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:12px;text-align:center;">
+        <div class="perf-lbl">MELHOR SETUP</div>
+        <div style="font-family:var(--cond);font-size:11px;font-weight:700;color:var(--yellow)">${st.melhor_setup||'—'}</div>
+      </div>
+    </div>`
+}
+
+function renderMemHoras() {
+  const el = document.getElementById('bar-mem-horas')
+  const horas = S.horarios.filter(h=>h.hora>=8&&h.hora<=17&&h.trades>0)
+  if (!horas.length) { el.innerHTML='<span style="color:var(--text3);font-size:11px;">SEM DADOS</span>'; return }
+  const max = Math.max(...horas.map(h=>h.trades),1)
+  el.innerHTML = horas.map(h=>{
+    const wr  = parseFloat(h.win_rate||0)
+    const alt = Math.max(6,(h.trades/max)*72)
+    const cor = wr>=65?'var(--green)':wr>=45?'var(--yellow)':'var(--red)'
+    return `<div class="bar-col">
+      <div class="bar" style="height:${alt}px;background:${cor};opacity:.8;"
+        title="${h.hora}h: ${h.trades}t WR${wr.toFixed(0)}%"
+        onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8"></div>
+      <div class="bar-lbl">${h.hora}h</div>
+    </div>`
+  }).join('')
+}
+
+// ══════════════════════════════════════════
+// RENDER STATUS SISTEMA
+// ══════════════════════════════════════════
+function renderStatus() {
+  ;['coletor','robo'].forEach(c=>{
+    const s = S.sistema[c]
+    const dot = document.getElementById(`d${c==='coletor'?'c':'r'}`)
+    const sys = document.getElementById(`sys-${c==='coletor'?'col':'rob'}`)
+    if (!s) return
+    const diff = (Date.now() - new Date(s.ultimo_heartbeat).getTime())/1000
+    const vivo = s.status==='online' && diff<60
+    dot.className = `dot ${vivo?'on':'off'}`
+    if (sys) { sys.textContent = vivo?'ONLINE':'OFFLINE'; sys.style.color = vivo?'var(--green)':'var(--red)' }
+  })
+
+  const robo = S.sistema['robo']
+  const badge = document.getElementById('sb-robobadge')
+  if (robo) {
+    const diff = (Date.now()-new Date(robo.ultimo_heartbeat).getTime())/1000
+    const on = robo.status==='online'&&diff<60
+    badge.textContent = on?'● ROBÔ ONLINE':'● ROBÔ OFFLINE'
+    badge.className = `robo-badge ${on?'on':'off'}`
+    if (robo.detalhes?.saldo) {
+      document.getElementById('sb-saldo').textContent = `R$ ${parseFloat(robo.detalhes.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+// CONFIGURAÇÕES
+// ══════════════════════════════════════════
+function toggleEye(id) {
+  const el = document.getElementById(id)
+  el.type = el.type==='password'?'text':'password'
+}
+function selModo(m) {
+  document.querySelectorAll('.modo-card').forEach(c=>c.classList.remove('sel'))
+  document.getElementById(`mc-${m}`).classList.add('sel')
+  document.getElementById('decisor-wrap').style.display = m==='dupla'?'block':'none'
+}
+function selModelo(el, m) {
+  document.querySelectorAll('#modelos-grid .model-card').forEach(c=>c.classList.remove('sel'))
+  el.classList.add('sel')
+}
+function selDecisor(el, m) {
+  document.querySelectorAll('#decisor-grid .model-card').forEach(c=>c.classList.remove('sel'))
+  el.classList.add('sel')
+}
+function toggleDia(el) { el.classList.toggle('on') }
+function toggleAgenda() {
+  const t = document.getElementById('tog-agenda')
+  t.classList.toggle('on')
+  document.getElementById('tog-agenda-lbl').textContent = t.classList.contains('on')?'ATIVADO':'DESATIVADO'
+}
+
+// ══════════════════════════════════════════
+// ALERTAS — MARCAR COMO LIDO
+// ══════════════════════════════════════════
+async function marcarLido(id) {
+  await sbWrite('alertas', {lido:true}, 'PATCH', `?id=eq.${id}`)
+  const idx = S.alertas.findIndex(a=>a.id===id)
+  if (idx>=0) { S.alertas[idx].lido=true; renderAlertas() }
+}
+async function marcarTodosLidos() {
+  for (const a of S.alertas.filter(a=>!a.lido))
+    await sbWrite('alertas', {lido:true}, 'PATCH', `?id=eq.${a.id}`)
+  S.alertas.forEach(a=>a.lido=true)
+  renderAlertas()
+  toast('Alertas limpos','a')
+}
+
+// ══════════════════════════════════════════
+// IA AUTO LIMITES
+// ══════════════════════════════════════════
+function toggleIaAuto() {
+  const tog = document.getElementById('tog-ia-auto')
+  tog.classList.toggle('on')
+  const ativo = tog.classList.contains('on')
+  atualizarUiIaAuto(ativo)
+}
+
+function atualizarUiIaAuto(ativo) {
+  const tog    = document.getElementById('tog-ia-auto')
+  const manuais = document.getElementById('limites-manuais')
+  const iaAtivo = document.getElementById('limites-ia-ativo')
+  const ultima  = document.getElementById('ia-auto-ultima')
+  const section = document.getElementById('ia-auto-section')
+
+  tog.classList.toggle('on', ativo)
+
+  if (ativo) {
+    manuais.classList.add('limites-disabled')
+    iaAtivo.style.display = 'block'
+    ultima.style.display  = 'block'
+    section.style.borderColor = 'rgba(168,85,247,.4)'
+    document.getElementById('ia-auto-desc').style.color = 'var(--text2)'
+  } else {
+    manuais.classList.remove('limites-disabled')
+    iaAtivo.style.display = 'none'
+    ultima.style.display  = 'none'
+    section.style.borderColor = ''
+  }
+}
+
+async function salvarLimites() {
+  const perdaMax  = document.getElementById('lim-perda-input').value
+  const confMin   = document.getElementById('lim-conf-input').value
+  const loteMax   = document.getElementById('lim-lote-input').value
+  const tradMax   = document.getElementById('lim-trades-input').value
+  const iaAuto    = document.getElementById('tog-ia-auto').classList.contains('on')
+
+  const campos = [
+    ['perda_max_dia',    perdaMax],
+    ['confianca_minima', confMin],
+    ['lote_max',         loteMax],
+    ['trades_max_dia',   tradMax],
+    ['ia_auto_limites',  iaAuto.toString()],
+  ]
+  // Sincroniza também nos inputs principais
+  document.getElementById('cfg-perda').value = perdaMax
+  document.getElementById('cfg-conf').value  = confMin
+  document.getElementById('cfg-lmax').value  = loteMax
+
+  let ok = true
+  for (const [chave, valor] of campos) {
+    const r = await sbWrite('configuracoes', {chave, valor})
+    if (!r) { ok=false; break }
+  }
+
+  if (ok) {
+    toast(iaAuto ? '🤖 IA vai calibrar os limites automaticamente!' : '🔒 Limites salvos!', 'a')
+    document.getElementById('lim-horario').textContent =
+      `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+  } else {
+    toast('❌ Erro ao salvar limites', 'a')
+  }
+}
+
+async function carregarIaAutoStatus() {
+  const { data } = await sb.from('configuracoes')
+    .select('chave,valor')
+    .in('chave', ['ia_auto_limites','ia_auto_ultima_revisao','ia_auto_motivo',
+                  'perda_max_dia','confianca_minima','lote_max','trades_max_dia'])
+  if (!data) return
+
+  const m = Object.fromEntries(data.map(r => [r.chave, r.valor]))
+
+  // Toggle state
+  const ativo = m.ia_auto_limites === 'true'
+  atualizarUiIaAuto(ativo)
+
+  // Preenche inputs de limites
+  if (m.perda_max_dia)    document.getElementById('lim-perda-input').value = m.perda_max_dia
+  if (m.confianca_minima) document.getElementById('lim-conf-input').value  = m.confianca_minima
+  if (m.lote_max)         document.getElementById('lim-lote-input').value  = m.lote_max
+  if (m.trades_max_dia)   document.getElementById('lim-trades-input').value = m.trades_max_dia
+
+  // Última calibração
+  if (m.ia_auto_ultima_revisao) {
+    document.getElementById('ia-auto-ts').textContent =
+      new Date(m.ia_auto_ultima_revisao).toLocaleString('pt-BR')
+    document.getElementById('ia-auto-motivo').textContent = m.ia_auto_motivo || '—'
+
+    // Mostra valores que a IA definiu
+    if (ativo) {
+      document.getElementById('limites-ia-valores').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
+            <div style="font-family:var(--cond);font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:3px;">CONF. MÍNIMA</div>
+            <div style="font-family:var(--cond);font-size:16px;font-weight:700;color:var(--purple)">${m.confianca_minima||'—'}%</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:8px;text-align:center;">
+            <div style="font-family:var(--cond);font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:3px;">LOTE MÁX</div>
+            <div style="font-family:var(--cond);font-size:16px;font-weight:700;color:var(--purple)">${m.lote_max||'—'}</div>
+          </div>
+        </div>`
+    }
+  }
+}
+
+async function salvarConfig() {
+  const st = document.getElementById('cfg-status')
+  st.textContent = 'Salvando...'
+  const campos = [
+    ['api_key_openai',   document.getElementById('cfg-key-openai').value],
+    ['api_key_anthropic',document.getElementById('cfg-key-anthropic').value],
+    ['confianca_minima', document.getElementById('cfg-conf').value],
+    ['perda_max_dia',    document.getElementById('cfg-perda').value],
+    ['lote_min',         document.getElementById('cfg-lmin').value],
+    ['lote_max',         document.getElementById('cfg-lmax').value],
+    ['scout_modelo',     document.querySelector('#modelos-grid .model-card.sel')?.dataset.m||''],
+    ['decisor_modelo',   document.querySelector('#decisor-grid .model-card.sel')?.dataset.m||'gpt-4o'],
+    ['modo_ia',          document.querySelector('.modo-card.sel')?.id.replace('mc-','')||'simples'],
+  ]
+  let ok = true
+  for (const [chave, valor] of campos) {
+    if (!valor) continue
+    const r = await sbWrite('configuracoes', {chave, valor})
+    if (!r) { ok=false; break }
+  }
+  // Limites display
+  document.getElementById('lim-perda').textContent  = `R$ ${document.getElementById('cfg-perda').value}`
+  document.getElementById('lim-lotes').textContent  = document.getElementById('cfg-lmax').value
+  document.getElementById('lim-horario').textContent = `${document.getElementById('cfg-liga').value} – ${document.getElementById('cfg-desliga').value}`
+
+  st.style.color = ok?'var(--green)':'var(--red)'
+  st.textContent  = ok?'✅ Configuração salva no Supabase!':'❌ Erro ao salvar'
+  if (ok) toast('Configuração salva com sucesso!','a')
+}
+
+async function testarConexao() {
+  const st = document.getElementById('cfg-status')
+  st.textContent = '⚡ Testando conexão...'
+  st.style.color = 'var(--yellow)'
+  // Verifica se há análise recente
+  const { data } = await sb.from('analises').select('ts,scout_modelo').order('ts',{ascending:false}).limit(1)
+  if (data?.length) {
+    const diff = (Date.now()-new Date(data[0].ts).getTime())/1000/60
+    st.style.color='var(--green)'
+    st.textContent=`✅ Supabase OK · Última análise há ${diff.toFixed(0)} min · Modelo: ${data[0].scout_modelo||'—'}`
+    toast('Conexão com Supabase OK!','a')
+  } else {
+    st.style.color='var(--yellow)'
+    st.textContent='⚠️ Supabase conectado mas sem análises ainda. Inicie o robô.'
+  }
+}
+
+async function salvarAgenda() {
+  const ativado = document.getElementById('tog-agenda').classList.contains('on')
+  const liga    = document.getElementById('cfg-liga').value
+  const desliga = document.getElementById('cfg-desliga').value
+  const dias    = [...document.querySelectorAll('.dia-btn.on')].map(d=>d.dataset.d).join(',')
+  await sbWrite('configuracoes', {chave:'horario_inicio', valor:liga})
+  await sbWrite('configuracoes', {chave:'horario_fim',    valor:desliga})
+  await sbWrite('configuracoes', {chave:'robo_ativo',     valor:ativado.toString()})
+  document.getElementById('lim-horario').textContent = `${liga} – ${desliga}`
+  toast('Agendamento salvo!','a')
+}
+
+async function carregarConfig() {
+  const { data } = await sb.from('configuracoes').select('chave,valor')
+  if (!data) return
+  const m = Object.fromEntries(data.map(r=>[r.chave,r.valor]))
+  if (m.api_key_openai)    document.getElementById('cfg-key-openai').value    = m.api_key_openai
+  if (m.api_key_anthropic) document.getElementById('cfg-key-anthropic').value = m.api_key_anthropic
+  if (m.confianca_minima)  document.getElementById('cfg-conf').value          = m.confianca_minima
+  if (m.perda_max_dia)     document.getElementById('cfg-perda').value         = m.perda_max_dia
+  if (m.lote_min)          document.getElementById('cfg-lmin').value          = m.lote_min
+  if (m.lote_max)          document.getElementById('cfg-lmax').value          = m.lote_max
+  if (m.horario_inicio)    document.getElementById('cfg-liga').value          = m.horario_inicio
+  if (m.horario_fim)       document.getElementById('cfg-desliga').value       = m.horario_fim
+  if (m.modo_ia)           selModo(m.modo_ia)
+  if (m.scout_modelo) {
+    document.querySelectorAll('#modelos-grid .model-card').forEach(c=>{
+      c.classList.toggle('sel', c.dataset.m===m.scout_modelo)
+    })
+  }
+  if (m.decisor_modelo) {
+    document.querySelectorAll('#decisor-grid .model-card').forEach(c=>{
+      c.classList.toggle('sel', c.dataset.m===m.decisor_modelo)
+    })
+  }
+  // Atualiza limites
+  if (m.perda_max_dia) document.getElementById('lim-perda').textContent = `R$ ${m.perda_max_dia}`
+  if (m.lote_max)      document.getElementById('lim-lotes').textContent = m.lote_max
+  if (m.horario_inicio && m.horario_fim)
+    document.getElementById('lim-horario').textContent = `${m.horario_inicio} – ${m.horario_fim}`
+}
+
+// ══════════════════════════════════════════
+// CARGA INICIAL
+// ══════════════════════════════════════════
+async function carregarTudo() {
+  const hoje = new Date().toISOString().split('T')[0]
+
+  // Ticks
+  const {data:tks} = await sb.from('ticks').select('*').order('ts',{ascending:false}).limit(4)
+  tks?.forEach(t=>renderTick(t))
+
+  // Análises
+  const {data:anals} = await sb.from('analises').select('*').order('ts',{ascending:false}).limit(4)
+  const visto=new Set()
+  anals?.forEach(a=>{ if(!visto.has(a.symbol)){visto.add(a.symbol);renderAnalise(a)} })
+
+  // Posições
+  const {data:pos} = await sb.from('posicoes_abertas').select('*').eq('status','aberta')
+  pos?.forEach(p=>{ S.posicoes[p.symbol]=p })
+  renderPosicao()
+
+  // Performance
+  const {data:pf} = await sb.from('performance_dia').select('*').eq('data',hoje).maybeSingle()
+  if (pf) { S.perfDia=pf; renderPerf() }
+
+  // Trades
+  const {data:trs} = await sb.from('trades').select('*').gte('ts_entrada',hoje).order('ts_entrada',{ascending:false})
+  if (trs) { S.trades=trs; renderHistorico() }
+
+  // Alertas
+  const {data:alts} = await sb.from('alertas').select('*').order('ts',{ascending:false}).limit(15)
+  if (alts) { S.alertas=alts; renderAlertas() }
+
+  // Setups
+  const {data:sets} = await sb.from('memoria_padroes').select('*').gt('trades',0).order('win_rate',{ascending:false})
+  if (sets) { S.setups=sets }
+
+  // Horários
+  const {data:hors} = await sb.from('memoria_horarios').select('*').gt('trades',0).order('hora')
+  if (hors) { S.horarios=hors }
+
+  // Aprendizados
+  const {data:aprs} = await sb.from('aprendizados').select('*').eq('ativo',true).order('ts',{ascending:false}).limit(20)
+  if (aprs) { S.aprendizados=aprs; renderAprendizados() }
+
+  // Estatísticas
+  const {data:sts} = await sb.from('memoria_estatisticas').select('*')
+  sts?.forEach(r=>{ try{ S.stats[r.chave]=JSON.parse(r.valor_json) }catch{} })
+
+  // Diário
+  const {data:diar} = await sb.from('diarios').select('*').eq('data',hoje).maybeSingle()
+  if (diar) { S.diario=diar }
+
+  // Sistema status
+  const {data:sys} = await sb.from('sistema_status').select('*')
+  sys?.forEach(s=>{ S.sistema[s.componente]=s })
+  renderStatus()
+
+  // Config
+  await carregarConfig()
+  await carregarIaAutoStatus()
+}
+
+// ══════════════════════════════════════════
+// REALTIME WEBSOCKET
+// ══════════════════════════════════════════
+function iniciarRealtime() {
+  const pw = document.getElementById('pw')
+  const wl = document.getElementById('wslbl')
+
+  sb.channel('rt-ticks')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'ticks'},p=>renderTick(p.new))
+    .subscribe(st=>{ if(st==='SUBSCRIBED'){pw.className='pulse ok';wl.textContent='REALTIME';wl.style.color='var(--green)'} })
+
+  sb.channel('rt-posicoes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'posicoes_abertas'},p=>{
+      if(p.new.status==='aberta') S.posicoes[p.new.symbol]=p.new
+      else delete S.posicoes[p.new.symbol]
+      renderPosicao()
+    }).subscribe()
+
+  sb.channel('rt-analises')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'analises'},p=>renderAnalise(p.new))
+    .subscribe()
+
+  sb.channel('rt-ordens')
+    .on('postgres_changes',{event:'*',schema:'public',table:'ordens'},p=>{
+      const o=p.new
+      if(o.status==='executada') { toast(`✅ ${o.tipo} ${o.symbol} @ ${o.preco_entrada}`,o.tipo==='COMPRA'?'c':'v'); carregarTudo() }
+      if(o.status==='fechada')   { toast(`🏁 Fechada: ${o.motivo_saida}`,'a'); carregarTudo() }
+    }).subscribe()
+
+  sb.channel('rt-alertas')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'alertas'},p=>{
+      S.alertas.unshift(p.new); renderAlertas()
+      toast(p.new.mensagem,'a')
+    }).subscribe()
+
+  sb.channel('rt-perf')
+    .on('postgres_changes',{event:'*',schema:'public',table:'performance_dia'},p=>{
+      S.perfDia=p.new; renderPerf()
+    }).subscribe()
+
+  // Realtime: configuracoes (IA auto calibração)
+  sb.channel('rt-config')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'configuracoes'},p=>{
+      const {chave,valor} = p.new
+      if (chave==='ia_auto_limites') {
+        atualizarUiIaAuto(valor==='true')
+      }
+      if (chave==='ia_auto_ultima_revisao') {
+        document.getElementById('ia-auto-ts').textContent = new Date(valor).toLocaleString('pt-BR')
+        carregarIaAutoStatus()
+        toast('🤖 IA calibrou os limites automaticamente!','a')
+      }
+      // Atualiza input se IA mudou algum limite
+      if (chave==='confianca_minima') document.getElementById('lim-conf-input').value = valor
+      if (chave==='lote_max') document.getElementById('lim-lote-input').value = valor
+      if (chave==='trades_max_dia') document.getElementById('lim-trades-input').value = valor
+    }).subscribe()
+
+  sb.channel('rt-status')
+    .on('postgres_changes',{event:'*',schema:'public',table:'sistema_status'},p=>{
+      S.sistema[p.new.componente]=p.new; renderStatus()
+    }).subscribe()
+}
+
+// ══════════════════════════════════════════
+// POLLING LEVE
+// ══════════════════════════════════════════
+async function polling() {
+  const hoje = new Date().toISOString().split('T')[0]
+  const {data:trs}  = await sb.from('trades').select('*').gte('ts_entrada',hoje).order('ts_entrada',{ascending:false})
+  if (trs) { S.trades=trs; renderHistorico() }
+  const {data:diar} = await sb.from('diarios').select('*').eq('data',hoje).maybeSingle()
+  if (diar && diar.ts_gerado!==S.diario?.ts_gerado) { S.diario=diar; renderDiario() }
+  renderStatus()
+}
+
+// ══════════════════════════════════════════
+// CANVAS — GRÁFICO ANIMADO (tela de login)
+// ══════════════════════════════════════════
+;(function initLoginChart() {
+  const cv = document.getElementById('lk-canvas')
+  if (!cv) return
+  const ctx = cv.getContext('2d')
+  let W, H, animFrame, stopped = false
+
+  function resize() {
+    W = cv.offsetWidth; H = cv.offsetHeight
+    cv.width  = W * devicePixelRatio
+    cv.height = H * devicePixelRatio
+    ctx.scale(devicePixelRatio, devicePixelRatio)
+  }
+  resize()
+  window.addEventListener('resize', () => { resize() })
+
+  // ── Parâmetros do gráfico ──
+  const N = 55                    // candles visíveis
+  const CANDLE_MS = 2000          // duração de cada candle (ms)
+  let candles = []                // histórico completo
+  let candleAtual = null          // candle que está sendo formado AO VIVO
+  let tInicio = 0                 // quando o candle atual começou
+
+  // Preço de referência e random walk suave
+  let precoBase = 132500
+  let tendencia = 0               // tendência atual (-1 a +1)
+  let tTendencia = 0              // quando muda
+
+  function novoPreco(prev) {
+    // Muda tendência a cada ~8s
+    if (Date.now() - tTendencia > 8000) {
+      tendencia = (Math.random() - 0.45) * 0.6
+      tTendencia = Date.now()
+    }
+    const volatilidade = 80 + Math.random() * 120
+    const drift = tendencia * volatilidade
+    return prev + drift + (Math.random() - 0.5) * volatilidade * 0.5
+  }
+
+  function gerarHistorico() {
+    candles = []
+    let preco = precoBase
+    for (let i = 0; i < N + 5; i++) {
+      const open  = preco
+      // Simula múltiplos ticks dentro do candle
+      let hi = open, lo = open, close = open
+      for (let t = 0; t < 8; t++) {
+        close = novoPreco(close)
+        hi = Math.max(hi, close)
+        lo = Math.min(lo, close)
+      }
+      candles.push({ open, close, high: hi, low: lo, done: true })
+      preco = close
+    }
+    precoBase = preco
+  }
+
+  function iniciarCandleAtual() {
+    const prev = candleAtual ? candleAtual.close
+      : (candles.length ? candles[candles.length-1].close : precoBase)
+    candleAtual = { open: prev, close: prev, high: prev, low: prev, done: false }
+    tInicio = Date.now()
+  }
+
+  // ── Tick: atualiza candle atual ──
+  let tickInterval = null
+  function tick() {
+    if (stopped || !candleAtual) return
+    const progresso = (Date.now() - tInicio) / CANDLE_MS
+
+    if (progresso >= 1) {
+      // Fecha candle atual e abre novo
+      candleAtual.done = true
+      candles.push({ ...candleAtual })
+      if (candles.length > N + 10) candles.shift()
+      iniciarCandleAtual()
+    } else {
+      // Evolui preço do candle atual
+      const novoClose = novoPreco(candleAtual.close)
+      candleAtual.close = novoClose
+      candleAtual.high  = Math.max(candleAtual.high, novoClose)
+      candleAtual.low   = Math.min(candleAtual.low, novoClose)
+    }
+  }
+
+  // ── Desenha frame ──
+  function draw() {
+    if (stopped) return
+    ctx.clearRect(0, 0, W, H)
+
+    // Candles para desenhar: histórico + atual
+    const todos = [...candles.slice(-N), ...(candleAtual ? [candleAtual] : [])]
+    if (todos.length < 2) { animFrame = requestAnimationFrame(draw); return }
+
+    // Escala de preço — baseada nos visíveis
+    const prices = todos.flatMap(c => [c.high, c.low])
+    const minP   = Math.min(...prices)
+    const maxP   = Math.max(...prices)
+    const range  = (maxP - minP) || 500
+    const pad    = range * 0.15
+
+    // Área de desenho — evita sobrepor tags/título
+    const areaT = H * 0.12
+    const areaB = H * 0.42
+    const areaH = H - areaT - areaB
+
+    function py(p) {
+      return areaT + areaH - ((p - (minP - pad)) / (range + pad * 2)) * areaH
+    }
+
+    // ── Grid horizontal suave ──
+    ctx.strokeStyle = 'rgba(0,212,255,0.05)'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 5; i++) {
+      const y = areaT + (areaH / 5) * i
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
+    }
+
+    // ── Grid vertical suave ──
+    ctx.strokeStyle = 'rgba(0,212,255,0.03)'
+    for (let i = 0; i <= 8; i++) {
+      const x = (W / 8) * i
+      ctx.beginPath(); ctx.moveTo(x, areaT); ctx.lineTo(x, areaT + areaH); ctx.stroke()
+    }
+
+    // ── Candles ──
+    const cW  = W / (N + 1)
+    const gap = Math.max(cW * 0.15, 1)
+    const bW  = Math.max(cW - gap * 2, 2)
+
+    todos.forEach((c, i) => {
+      const alta = c.close >= c.open
+      const isAtual = !c.done
+      const x   = i * cW + gap
+      const cx  = x + bW / 2
+      const yO  = py(c.open)
+      const yC  = py(c.close)
+      const yH  = py(c.high)
+      const yL  = py(c.low)
+
+      const corBase = alta ? [0,229,160] : [255,61,90]
+      const alfaCorp = isAtual ? 0.85 : 0.65
+      const alfaWick = isAtual ? 0.6  : 0.4
+
+      // Pavio
+      ctx.strokeStyle = `rgba(${corBase},${alfaWick})`
+      ctx.lineWidth   = 1
+      ctx.beginPath(); ctx.moveTo(cx, yH); ctx.lineTo(cx, yL); ctx.stroke()
+
+      // Corpo
+      const bodyY = Math.min(yO, yC)
+      const bodyH = Math.max(Math.abs(yO - yC), 1.5)
+
+      // Gradiente no corpo
+      const grd = ctx.createLinearGradient(x, bodyY, x, bodyY + bodyH)
+      grd.addColorStop(0,   `rgba(${corBase},${alfaCorp})`)
+      grd.addColorStop(1,   `rgba(${corBase},${alfaCorp * 0.5})`)
+      ctx.fillStyle = grd
+      ctx.fillRect(x, bodyY, bW, bodyH)
+
+      // Borda do corpo (mais brilhante no candle atual)
+      ctx.strokeStyle = `rgba(${corBase},${isAtual ? 1 : 0.8})`
+      ctx.lineWidth   = isAtual ? 1 : 0.5
+      if (isAtual) {
+        ctx.shadowColor = `rgba(${corBase},0.6)`
+        ctx.shadowBlur  = 8
+      }
+      ctx.strokeRect(x, bodyY, bW, bodyH)
+      ctx.shadowBlur = 0
+    })
+
+    // ── Linha de preço (close suavizado) ──
+    const closes = todos.map((c, i) => ({ x: i * cW + cW / 2, y: py(c.close) }))
+
+    // Área preenchida abaixo da linha
+    const grad = ctx.createLinearGradient(0, areaT, 0, areaT + areaH)
+    grad.addColorStop(0,   'rgba(0,212,255,0.12)')
+    grad.addColorStop(0.6, 'rgba(0,212,255,0.03)')
+    grad.addColorStop(1,   'rgba(0,212,255,0)')
+    ctx.beginPath()
+    ctx.moveTo(closes[0].x, areaT + areaH)
+    closes.forEach(p => ctx.lineTo(p.x, p.y))
+    ctx.lineTo(closes[closes.length-1].x, areaT + areaH)
+    ctx.closePath()
+    ctx.fillStyle = grad
+    ctx.fill()
+
+    // Linha principal
+    const lineGrad = ctx.createLinearGradient(0, 0, W, 0)
+    lineGrad.addColorStop(0,   'rgba(0,212,255,0.1)')
+    lineGrad.addColorStop(0.4, 'rgba(0,212,255,0.7)')
+    lineGrad.addColorStop(1,   'rgba(0,212,255,1)')
+    ctx.beginPath()
+    closes.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
+    ctx.strokeStyle = lineGrad
+    ctx.lineWidth   = 1.5
+    ctx.lineJoin    = 'round'
+    ctx.shadowColor = 'rgba(0,212,255,0.5)'
+    ctx.shadowBlur  = 8
+    ctx.stroke()
+    ctx.shadowBlur  = 0
+
+    // ── Ponto vivo (último preço) ──
+    const lp = closes[closes.length - 1]
+    const t  = Date.now() / 1000
+
+    // Pulso externo
+    const pulse = (Math.sin(t * 4) + 1) / 2
+    ctx.beginPath()
+    ctx.arc(lp.x, lp.y, 6 + pulse * 4, 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(0,212,255,${0.1 + pulse * 0.08})`
+    ctx.fill()
+
+    // Ponto central fixo
+    ctx.beginPath()
+    ctx.arc(lp.x, lp.y, 3.5, 0, Math.PI * 2)
+    ctx.fillStyle = '#00d4ff'
+    ctx.shadowColor = 'rgba(0,212,255,0.9)'
+    ctx.shadowBlur  = 16
+    ctx.fill()
+    ctx.shadowBlur  = 0
+
+    // ── Linha tracejada horizontal ──
+    ctx.setLineDash([3, 5])
+    ctx.beginPath()
+    ctx.moveTo(lp.x + 5, lp.y)
+    ctx.lineTo(W - 60, lp.y)
+    ctx.strokeStyle = 'rgba(0,212,255,0.2)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // ── Label de preço ──
+    const precoStr = (candleAtual ? candleAtual.close : 0).toFixed(0)
+    const lblW = 54, lblH = 18, lblX = W - lblW - 2, lblY = lp.y - lblH/2
+
+    ctx.fillStyle = 'rgba(0,212,255,0.15)'
+    ctx.strokeStyle = 'rgba(0,212,255,0.5)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.roundRect(lblX, lblY, lblW, lblH, 2)
+    ctx.fill(); ctx.stroke()
+
+    ctx.fillStyle = '#00d4ff'
+    ctx.font = 'bold 9px "Space Mono", monospace'
+    ctx.textAlign = 'center'
+    ctx.fillText(precoStr, lblX + lblW/2, lblY + 12)
+    ctx.textAlign = 'left'
+
+    animFrame = requestAnimationFrame(draw)
+  }
+
+  gerarHistorico()
+  iniciarCandleAtual()
+  tickInterval = setInterval(tick, 50)   // atualiza 20x/s
+  draw()
+
+  // Para quando login some
+  const ls = document.getElementById('login-screen')
+  if (ls) {
+    const obs = new MutationObserver(() => {
+      if (ls.style.display === 'none') {
+        stopped = true
+        cancelAnimationFrame(animFrame)
+        clearInterval(tickInterval)
+        obs.disconnect()
+      }
+    })
+    obs.observe(ls, { attributes: true, attributeFilter: ['style'] })
+  }
+})()
+
+// ══════════════════════════════════════════
+// SLIDESHOW DA TELA DE LOGIN
+// ══════════════════════════════════════════
+const LK_SLIDES = [
+  {
+    titulo: 'DOMINE O<br><span>MERCADO</span>',
+    desc: 'Tecnologia e inteligência artificial trabalhando para você. Operações automatizadas com precisão cirúrgica.',
+    tags: [['g','● B3 AO VIVO'],['c','MINI ÍNDICE'],['y','WIN & WDO']]
+  },
+  {
+    titulo: 'DADOS QUE<br><span>DECIDEM</span>',
+    desc: 'Análise técnica em tempo real. Suportes, resistências e sinais de entrada calculados pela EVA IA.',
+    tags: [['c','ANÁLISE TÉCNICA'],['g','IA ATIVA'],['y','TEMPO REAL']]
+  },
+  {
+    titulo: 'RISCO<br><span>CONTROLADO</span>',
+    desc: 'Stop automático, gestão de capital e proteção de patrimônio. O robô nunca ultrapassa seus limites.',
+    tags: [['g','GESTÃO DE RISCO'],['c','STOP AUTO'],['y','PROTEÇÃO']]
+  }
+]
+
+let _slideAtual = 0
+let _slideTimer = null
+
+function goSlide(idx) {
+  const slides = document.querySelectorAll('.lk-slide')
+  const dots   = document.querySelectorAll('.lk-dot-item')
+  if (!slides.length) return
+
+  slides[_slideAtual].classList.remove('ativo')
+  dots[_slideAtual].classList.remove('ativo')
+  _slideAtual = (idx + slides.length) % slides.length
+  slides[_slideAtual].classList.add('ativo')
+  dots[_slideAtual].classList.add('ativo')
+
+  // Atualiza texto com fade
+  const s = LK_SLIDES[_slideAtual]
+  const tEl = document.getElementById('lk-vis-title')
+  const dEl = document.getElementById('lk-vis-desc')
+  const tgEl = document.getElementById('lk-tags')
+  if (tEl) {
+    tEl.style.opacity='0'; dEl.style.opacity='0'; tgEl.style.opacity='0'
+    setTimeout(()=>{
+      tEl.innerHTML = s.titulo
+      dEl.textContent = s.desc
+      tgEl.innerHTML = s.tags.map(t=>`<span class="lk-tag ${t[0]}">${t[1]}</span>`).join('')
+      tEl.style.transition='opacity .6s'; dEl.style.transition='opacity .6s'; tgEl.style.transition='opacity .6s'
+      tEl.style.opacity='1'; dEl.style.opacity='1'; tgEl.style.opacity='1'
+    }, 300)
+  }
+  clearTimeout(_slideTimer)
+  _slideTimer = setTimeout(()=>goSlide(_slideAtual+1), 5000)
+}
+
+// Inicia slideshow ao carregar
+;(()=>{
+  // Popula tags do primeiro slide
+  const s = LK_SLIDES[0]
+  const tgEl = document.getElementById('lk-tags')
+  if (tgEl) tgEl.innerHTML = s.tags.map(t=>`<span class="lk-tag ${t[0]}">${t[1]}</span>`).join('')
+  _slideTimer = setTimeout(()=>goSlide(1), 5000)
+})()
+
+// ══════════════════════════════════════════
+// AUTH — LOGIN / LOGOUT
+// ══════════════════════════════════════════
+let _usuarioAtual = null
+
+function loginTab(aba) {
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('ativo'))
+  document.getElementById(`tab-${aba}`).classList.add('ativo')
+  document.getElementById('form-entrar').style.display = aba==='entrar'?'block':'none'
+  document.getElementById('form-criar').style.display  = aba==='criar'?'block':'none'
+  document.getElementById('login-msg').style.display   = 'none'
+}
+
+function toggleLoginEye(id) {
+  const el = document.getElementById(id)
+  el.type = el.type==='password'?'text':'password'
+}
+
+function mostrarMsgLogin(msg, tipo='err') {
+  const el = document.getElementById('login-msg')
+  el.textContent = msg
+  el.className = `login-msg ${tipo}`
+  el.style.display = 'block'
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('l-email').value.trim()
+  const senha = document.getElementById('l-senha').value
+  if (!email||!senha) { mostrarMsgLogin('Preencha e-mail e senha.'); return }
+
+  const btn = document.getElementById('btn-login')
+  btn.disabled=true; btn.querySelector('.login-btn-text').textContent='⏳ AUTENTICANDO...'
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: senha })
+
+  if (error) {
+    btn.disabled=false; btn.querySelector('.login-btn-text').textContent='⚡ ACESSAR SISTEMA'
+    const msgs = {
+      'Invalid login credentials': 'E-mail ou senha incorretos.',
+      'Email not confirmed': 'Confirme seu e-mail antes de entrar.',
+      'Too many requests': 'Muitas tentativas. Aguarde alguns minutos.',
+    }
+    mostrarMsgLogin(msgs[error.message]||error.message)
+    return
+  }
+
+  // Sucesso — esconde login
+  entrarNoDashboard(data.user)
+}
+
+async function esqueceuSenha() {
+  const email = document.getElementById('l-email').value.trim()
+  if (!email) { mostrarMsgLogin('Digite seu e-mail acima primeiro.'); return }
+  const { error } = await sb.auth.resetPasswordForEmail(email)
+  if (error) { mostrarMsgLogin(error.message); return }
+  mostrarMsgLogin('✅ Link de redefinição enviado para ' + email, 'ok')
+}
+
+function entrarNoDashboard(user) {
+  _usuarioAtual = user
+  // Avatar — iniciais do nome ou email
+  const nome = user.user_metadata?.nome || user.email || '?'
+  const iniciais = nome.split(' ').slice(0,2).map(n=>n[0].toUpperCase()).join('')
+  const av = document.getElementById('user-avatar')
+  av.textContent = iniciais
+  document.getElementById('user-menu-email').textContent = user.email
+
+  // Anima saída do login
+  const ls = document.getElementById('login-screen')
+  ls.classList.add('saindo')
+  setTimeout(()=>ls.style.display='none', 500)
+
+  // Inicia dashboard
+  carregarTudo().then(()=>{ iniciarRealtime(); setInterval(polling,30000) })
+}
+
+function toggleUserMenu() {
+  document.getElementById('user-menu').classList.toggle('aberto')
+}
+
+// Fecha menu ao clicar fora
+document.addEventListener('click', e=>{
+  const av = document.getElementById('user-avatar')
+  const mn = document.getElementById('user-menu')
+  if (!av.contains(e.target) && !mn.contains(e.target)) mn.classList.remove('aberto')
+})
+
+async function fazerLogout() {
+  await sb.auth.signOut()
+  _usuarioAtual = null
+  document.getElementById('user-menu').classList.remove('aberto')
+  document.getElementById('login-screen').style.display='flex'
+  document.getElementById('login-screen').classList.remove('saindo')
+  document.getElementById('login-msg').style.display='none'
+  document.getElementById('l-senha').value=''
+}
+
+// ══════════════════════════════════════════
+// INIT — verifica sessão existente
+// ══════════════════════════════════════════
+;(async () => {
+  const { data: { session } } = await sb.auth.getSession()
+  if (session?.user) {
+    // Já está logado — entra direto
+    entrarNoDashboard(session.user)
+  }
+  // Se não há sessão, a tela de login fica visível
+
+  // Listener para mudanças de sessão (ex: token refresh, logout em outra aba)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event==='SIGNED_OUT') {
+      fazerLogout()
+    } else if (event==='SIGNED_IN' && session) {
+      if (!_usuarioAtual) entrarNoDashboard(session.user)
+    }
+  })
+})()
+</script>
+</body>
+</html>
