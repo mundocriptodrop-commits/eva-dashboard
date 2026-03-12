@@ -2737,6 +2737,26 @@ function iniciarRealtime() {
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'analises'},p=>renderAnalise(p.new))
     .subscribe()
 
+  // Trades em realtime — aparece no histórico IMEDIATAMENTE quando trade fecha
+  sb.channel('rt-trades')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'trades'},p=>{
+      const t = p.new
+      if (!t) return
+      const hoje = new Date().toISOString().split('T')[0]
+      // Só processa trades de hoje
+      if (t.ts_entrada && t.ts_entrada.startsWith(hoje)) {
+        // Evita duplicatas
+        if (!S.trades.find(x=>x.id===t.id)) {
+          S.trades.unshift(t)
+          renderHistorico()
+          const res = parseFloat(t.resultado_brl||0)
+          const emoji = res>=0 ? '✅' : '❌'
+          toast(`${emoji} Trade: ${t.tipo} ${t.symbol} ${res>=0?'+':''}R$${Math.abs(res).toFixed(2)} [${t.motivo_saida||'—'}]`, res>=0?'c':'v')
+        }
+      }
+    })
+    .subscribe()
+
   // Performance do dia — atualiza em tempo real após cada trade
   sb.channel('rt-perf-dia')
     .on('postgres_changes',{event:'*',schema:'public',table:'performance_dia'},p=>{
