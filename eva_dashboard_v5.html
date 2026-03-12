@@ -850,12 +850,14 @@ nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);ove
               <div class="pb-preco neu" id="win-p">—</div>
               <div class="pb-sub"><span>BID</span><span id="win-bid">—</span>&nbsp;<span>ASK</span><span id="win-ask">—</span>&nbsp;<span>SPR</span><span id="win-spr">—</span></div>
               <div class="pb-var" id="win-var">—</div>
+              <div class="pb-abertura" id="win-abertura-row" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:1px;">ABERTURA <span id="win-ab">—</span> &nbsp;|&nbsp; GAP <span id="win-gap">—</span></div>
             </div>
             <div class="preco-bloco wdo" id="pb-wdo">
               <div class="pb-nome">DÓLAR (WDO)</div>
               <div class="pb-preco neu" id="wdo-p">—</div>
               <div class="pb-sub"><span>BID</span><span id="wdo-bid">—</span>&nbsp;<span>ASK</span><span id="wdo-ask">—</span>&nbsp;<span>SPR</span><span id="wdo-spr">—</span></div>
               <div class="pb-var" id="wdo-var">—</div>
+              <div class="pb-abertura" id="wdo-abertura-row" style="display:none;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:3px;letter-spacing:1px;">ABERTURA <span id="wdo-ab">—</span> &nbsp;|&nbsp; GAP <span id="wdo-gap">—</span></div>
             </div>
           </div>
         </div>
@@ -1623,6 +1625,29 @@ function renderTick(t) {
   vEl.className   = `pb-var ${vPct>=0?'up':'dn'}`
 
   setText('tick-ts', new Date(t.ts).toLocaleTimeString('pt-BR',{hour12:false}))
+
+  // Abertura do dia + gap
+  const ab = parseFloat(t.abertura_dia || 0)
+  const abRow = document.getElementById(`${pre}-abertura-row`)
+  if (ab > 0 && abRow) {
+    abRow.style.display = 'block'
+    const abEl = document.getElementById(`${pre}-ab`)
+    if (abEl) abEl.textContent = isW ? ab.toFixed(0) : ab.toFixed(2)
+    // Gap = diferença do último fechamento do dia anterior para abertura
+    // Usa referência anterior ao primeiro tick do dia
+    const gapPts = ref > 0 && S.ticksRef[t.symbol] !== ult ? (ab - ref) : 0
+    const gapEl  = document.getElementById(`${pre}-gap`)
+    if (gapEl) {
+      // Se temos abertura, mostrar variação do preço atual vs abertura
+      const varAb = ab > 0 ? ((ult - ab) / ab * 100) : 0
+      const varPts = ab > 0 ? (ult - ab) : 0
+      const gapStr = ab > 0
+        ? `${varPts >= 0 ? '+' : ''}${isW ? varPts.toFixed(0) : varPts.toFixed(2)}pts (${varPts >= 0 ? '+' : ''}${varAb.toFixed(2)}%)`
+        : '—'
+      gapEl.textContent = gapStr
+      gapEl.style.color = varPts >= 0 ? 'var(--green)' : 'var(--red)'
+    }
+  }
 
   // Atualiza P&L se há posição
   const pos = Object.values(S.posicoes).find(p=>p.symbol===t.symbol&&p.status==='aberta')
