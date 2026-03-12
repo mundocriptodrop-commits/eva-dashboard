@@ -2207,7 +2207,11 @@ function renderStatus() {
     const diff = (Date.now() - new Date(s.ultimo_heartbeat).getTime())/1000
     const vivo = s.status==='online' && diff<120
     dot.className = `dot ${vivo?'on':'off'}`
-    if (sys) { sys.textContent = vivo?'ONLINE':'OFFLINE'; sys.style.color = vivo?'var(--green)':'var(--red)' }
+    const semCotaSys = s.status === 'sem_cota'
+    if (sys) {
+      sys.textContent = semCotaSys ? 'SEM COTA' : vivo ? 'ONLINE' : 'OFFLINE'
+      sys.style.color = semCotaSys ? 'var(--yellow)' : vivo ? 'var(--green)' : 'var(--red)'
+    }
   })
 
   const robo = S.sistema['robo']
@@ -2215,8 +2219,12 @@ function renderStatus() {
   if (robo) {
     const diff = (Date.now()-new Date(robo.ultimo_heartbeat).getTime())/1000
     const on = robo.status==='online'&&diff<120
-    badge.textContent = on?'● ROBÔ ONLINE':'● ROBÔ OFFLINE'
-    badge.className = `robo-badge ${on?'on':'off'}`
+    const semCota = robo.status === 'sem_cota'
+    badge.textContent = semCota ? '⛔ SEM COTA OPENAI' : on ? '● ROBÔ ONLINE' : '● ROBÔ OFFLINE'
+    badge.className = `robo-badge ${semCota ? 'off' : on ? 'on' : 'off'}`
+    if (semCota) badge.title = 'Cota OpenAI esgotada — recarregue saldo em platform.openai.com/billing'
+    if (!semCota) badge.title = ''
+
     const d = robo.detalhes || {}
     if (d.saldo) {
       setText('sb-saldo', `R$ ${parseFloat(d.saldo).toLocaleString('pt-BR',{minimumFractionDigits:2})}`)
