@@ -2750,8 +2750,16 @@ function iniciarRealtime() {
         }
 
       } else if (evt === 'UPDATE' && row.symbol) {
-        // Atualização de P&L — atualiza silenciosamente
-        if (S.posicoes[row.symbol]) {
+        // UPDATE com status aberta — pode ser upsert de nova posição
+        if (row.status === 'aberta') {
+          const isNova = !S.posicoes[row.symbol]
+          S.posicoes[row.symbol] = row
+          renderPosicao()
+          if (isNova) {
+            toast(`📈 Posição aberta: ${row.tipo} ${row.symbol} @ ${parseFloat(row.entrada||0).toFixed(0)}`, row.tipo==='COMPRA'?'c':'v')
+          }
+        } else if (S.posicoes[row.symbol]) {
+          // Atualização de P&L em posição já conhecida
           S.posicoes[row.symbol] = {...S.posicoes[row.symbol], ...row}
           renderPosicao()
         }
@@ -2855,6 +2863,11 @@ async function polling() {
   if (trs) { S.trades=trs; renderHistorico() }
   const {data:diar} = await sb.from('diarios').select('*').eq('data',hoje).maybeSingle()
   if (diar && diar.ts_gerado!==S.diario?.ts_gerado) { S.diario=diar; renderDiario() }
+  // Fallback: recarrega posicoes_abertas caso Realtime tenha falhado
+  const {data:pos} = await sb.from('posicoes_abertas').select('*').eq('status','aberta')
+  S.posicoes = {}
+  pos?.forEach(p=>{ S.posicoes[p.symbol]=p })
+  renderPosicao()
   renderStatus()
 }
 
